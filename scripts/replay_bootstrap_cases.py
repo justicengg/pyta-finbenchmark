@@ -116,7 +116,7 @@ def replay_cases(cases: Iterable[dict[str, Any]], dry_run: bool = False) -> None
                 continue
 
             run_response = client.post(
-                f"{MAIN_BACKEND_URL}/sandbox/run",
+                f"{MAIN_BACKEND_URL}/api/v1/sandbox/run",
                 json=payload,
                 headers=backend_headers,
             )
