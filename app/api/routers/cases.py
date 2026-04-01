@@ -3,7 +3,6 @@ EvalCase CRUD + bootstrap case creation.
 """
 
 from datetime import datetime
-from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -22,6 +21,12 @@ class BootstrapCaseRequest(BaseModel):
     market: str
     run_timestamp: datetime
     input_narrative: str
+    agent_snapshots: list[dict]
+    resolution_snapshot: dict | None = None
+
+
+class SnapshotUpdateRequest(BaseModel):
+    """Patch payload for bootstrap replay snapshot backfill."""
     agent_snapshots: list[dict]
     resolution_snapshot: dict | None = None
 
@@ -71,15 +76,34 @@ def list_cases(
 
 
 @router.get("/{case_id}")
-def get_case(case_id: UUID, db: Session = Depends(get_db)):
+def get_case(case_id: str, db: Session = Depends(get_db)):
     case = db.query(EvalCase).filter(EvalCase.id == case_id).first()
     if not case:
         raise HTTPException(status_code=404, detail="Case not found")
-    return _serialize(case)
+    return _serialize(case, detail=True)
 
 
-def _serialize(case: EvalCase) -> dict:
+@router.patch("/{case_id}/snapshots")
+def update_snapshots(case_id: str, body: SnapshotUpdateRequest, db: Session = Depends(get_db)):
+    case = db.query(EvalCase).filter(EvalCase.id == case_id).first()
+    if not case:
+        raise HTTPException(status_code=404, detail="Case not found")
+
+    case.agent_snapshots = body.agent_snapshots
+    if body.resolution_snapshot is not None:
+        case.resolution_snapshot = body.resolution_snapshot
+    db.commit()
+    db.refresh(case)
     return {
+        "status": "updated",
+        "case_id": str(case.id),
+        "agent_count": len(case.agent_snapshots or []),
+        "has_resolution": case.resolution_snapshot is not None,
+    }
+
+
+def _serialize(case: EvalCase, detail: bool = False) -> dict:
+    data = {
         "id": str(case.id),
         "run_id": case.run_id,
         "ticker": case.ticker,
@@ -91,3 +115,10 @@ def _serialize(case: EvalCase) -> dict:
         "has_resolution": case.resolution_snapshot is not None,
         "created_at": case.created_at.isoformat(),
     }
+    if detail:
+        data.update({
+            "input_narrative": case.input_narrative,
+            "agent_snapshots": case.agent_snapshots or [],
+            "resolution_snapshot": case.resolution_snapshot,
+        })
+    return data
