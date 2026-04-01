@@ -29,7 +29,7 @@
 
 - 已完成接口与脚本实现
 - 已完成本地代码级验证
-- 待服务启动后执行真实 replay smoke test
+- 已完成 5 条 bootstrap case 真实 replay smoke test
 
 ## 实际落地
 
@@ -40,16 +40,36 @@
    - `resolution_snapshot`
 3. 新增 `scripts/replay_bootstrap_cases.py`
    - 拉取 bootstrap cases
-   - 调用主后端 `/sandbox/run`
+   - 调用主后端 `/api/v1/sandbox/run`
    - 提取 agent snapshots
    - PATCH 回 eval-service
 4. 新增最小 API 测试 `tests/test_cases_api.py`
+5. 修正 replay 脚本主后端路径
+   - 从 `/sandbox/run` 更正为 `/api/v1/sandbox/run`
+6. 实际 smoke test 时补充本地代理绕过
+   - 使用 `NO_PROXY=127.0.0.1,localhost`
+   - 避免 localhost 请求被代理层错误拦截为 `403`
 
 ## 验证结果
 
 - `.venv/bin/python -m py_compile app/api/routers/cases.py scripts/replay_bootstrap_cases.py tests/test_cases_api.py`
 - `.venv/bin/python -c "from tests.test_cases_api import test_case_detail_and_snapshot_patch; test_case_detail_and_snapshot_patch(); print('test_cases_api ok')"`
+- `curl -i http://127.0.0.1:8010/health`
+- `curl -i http://127.0.0.1:8011/health`
+- `curl -i "http://127.0.0.1:8011/api/cases/?source=bootstrap&limit=5&offset=0"`
+- `NO_PROXY=127.0.0.1,localhost EVAL_SERVICE_URL=http://127.0.0.1:8011 MAIN_BACKEND_URL=http://127.0.0.1:8010 .venv/bin/python scripts/replay_bootstrap_cases.py --limit 5`
+
+### 真实 smoke test 结果
+
+- 前 5 条 bootstrap case 已全部回填成功
+- 每条 case 当前均满足：
+  - `agent_count = 5`
+  - `has_resolution = true`
+- 示例成功 case：
+  - `f02078a2-41cb-413c-b321-45649ccf3567`
+  - `run_id = bootstrap-688256.SH-2026-01-15`
 
 ## 未完成项
 
-- 本机 `127.0.0.1:8000` 与 `127.0.0.1:8001` 当前未运行，因此这轮未执行真实 replay dry-run
+- 剩余 bootstrap case 全量 replay
+- 如有需要，再触发 GT 收集与后续评分链验证
