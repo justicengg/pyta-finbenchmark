@@ -1,12 +1,17 @@
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from app.api.routers import cases, scores, webhook
 from app.db import Base, engine
 from app.jobs import collect_gt, run_scoring
+
+DASHBOARD_DIR = Path(__file__).parent.parent / "dashboard"
 
 
 @asynccontextmanager
@@ -49,3 +54,13 @@ app.include_router(scores.router, prefix="/api")
 @app.get("/health")
 def health():
     return {"status": "ok", "service": "pyta-eval"}
+
+
+@app.get("/dashboard", include_in_schema=False)
+@app.get("/dashboard/", include_in_schema=False)
+def dashboard():
+    return FileResponse(DASHBOARD_DIR / "index.html")
+
+
+if DASHBOARD_DIR.exists():
+    app.mount("/dashboard/assets", StaticFiles(directory=DASHBOARD_DIR), name="dashboard-assets")

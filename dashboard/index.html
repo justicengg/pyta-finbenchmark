@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PYTA FinBenchmark</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;1,400&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #07090f;
+      --surface:   #0c1018;
+      --surface2:  #111827;
+      --border:    #1a2535;
+      --border2:   #243044;
+
+      --blue:      #3b82f6;
+      --blue-dim:  rgba(59,130,246,.12);
+      --teal:      #14b8a6;
+      --green:     #22c55e;
+      --green-dim: rgba(34,197,94,.12);
+      --red:       #ef4444;
+      --red-dim:   rgba(239,68,68,.12);
+      --amber:     #f59e0b;
+      --amber-dim: rgba(245,158,11,.12);
+
+      --text:      #e2e8f0;
+      --text-2:    #94a3b8;
+      --text-3:    #475569;
+
+      --mono: 'JetBrains Mono', monospace;
+      --sans: 'Syne', sans-serif;
+
+      --radius: 6px;
+      --radius-lg: 10px;
+    }
+
+    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--sans); }
+
+    /* ── scrollbar ── */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 99px; }
+
+    /* ── layout ── */
+    .shell { display: grid; grid-template-rows: 52px 1fr; height: 100vh; overflow: hidden; }
+
+    /* ── header ── */
+    header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 24px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+      position: relative;
+      z-index: 10;
+    }
+    .logo {
+      display: flex; align-items: center; gap: 10px;
+      font-family: var(--sans); font-weight: 800; font-size: 15px; letter-spacing: .04em;
+      color: var(--text);
+    }
+    .logo-mark {
+      width: 26px; height: 26px; border-radius: 5px;
+      background: var(--blue); display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 800; color: #fff; letter-spacing: -.02em;
+    }
+    .logo-sep { color: var(--border2); margin: 0 2px; }
+    .logo-sub { color: var(--text-2); font-weight: 400; font-size: 13px; letter-spacing: .02em; }
+
+    .header-right { display: flex; align-items: center; gap: 20px; }
+    .pulse-wrap { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-3); font-family: var(--mono); }
+    .pulse {
+      width: 7px; height: 7px; border-radius: 50%; background: var(--green);
+      box-shadow: 0 0 0 0 rgba(34,197,94,.6);
+      animation: pulse 2.4s ease infinite;
+    }
+    @keyframes pulse {
+      0%   { box-shadow: 0 0 0 0 rgba(34,197,94,.5); }
+      70%  { box-shadow: 0 0 0 6px rgba(34,197,94,0); }
+      100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); }
+    }
+    .refresh-btn {
+      padding: 4px 12px; border-radius: var(--radius); border: 1px solid var(--border2);
+      background: transparent; color: var(--text-2); font-size: 12px; font-family: var(--mono);
+      cursor: pointer; transition: all .15s;
+    }
+    .refresh-btn:hover { border-color: var(--blue); color: var(--blue); }
+
+    /* ── main scroll area ── */
+    main { overflow-y: auto; padding: 24px; display: flex; flex-direction: column; gap: 20px; }
+
+    /* ── kpi strip ── */
+    .kpi-strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+
+    .kpi-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 18px 20px;
+      position: relative; overflow: hidden;
+      transition: border-color .2s;
+    }
+    .kpi-card:hover { border-color: var(--border2); }
+    .kpi-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+      background: var(--accent-color, var(--blue));
+    }
+    .kpi-label { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--text-3); margin-bottom: 10px; }
+    .kpi-value {
+      font-family: var(--mono); font-size: 32px; font-weight: 600; line-height: 1;
+      color: var(--accent-color, var(--text));
+      transition: color .3s;
+    }
+    .kpi-value.null-val { color: var(--text-3); font-size: 20px; }
+    .kpi-meta { margin-top: 8px; font-size: 12px; color: var(--text-3); font-family: var(--mono); }
+    .kpi-trend { display: inline-flex; align-items: center; gap: 4px; }
+
+    /* ── two-col mid section ── */
+    .mid { display: grid; grid-template-columns: 1fr 360px; gap: 12px; }
+
+    .panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); overflow: hidden;
+    }
+    .panel-head {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 20px; border-bottom: 1px solid var(--border);
+    }
+    .panel-title { font-size: 13px; font-weight: 600; letter-spacing: .02em; }
+    .panel-badge {
+      font-family: var(--mono); font-size: 11px; color: var(--text-3);
+      background: var(--surface2); border: 1px solid var(--border);
+      padding: 2px 8px; border-radius: 99px;
+    }
+    .panel-body { padding: 20px; }
+
+    /* gradient chart */
+    .chart-wrap { position: relative; height: 220px; }
+
+    /* dimension bars */
+    .dim-list { display: flex; flex-direction: column; gap: 14px; }
+    .dim-row {}
+    .dim-top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 5px; }
+    .dim-name { font-size: 12px; color: var(--text-2); }
+    .dim-score { font-family: var(--mono); font-size: 13px; font-weight: 500; }
+    .dim-score.null-score { color: var(--text-3); }
+    .dim-bar-bg { height: 4px; background: var(--surface2); border-radius: 99px; overflow: hidden; }
+    .dim-bar-fill { height: 100%; border-radius: 99px; transition: width .6s cubic-bezier(.4,0,.2,1); }
+    .dim-count { font-size: 11px; color: var(--text-3); font-family: var(--mono); margin-top: 3px; }
+
+    /* ── cases table ── */
+    .cases-section .panel-head { flex-wrap: wrap; gap: 10px; }
+    .filter-row { display: flex; gap: 8px; align-items: center; }
+    select, .filter-select {
+      background: var(--surface2); border: 1px solid var(--border2); color: var(--text-2);
+      font-family: var(--mono); font-size: 12px; padding: 4px 10px; border-radius: var(--radius);
+      outline: none; cursor: pointer;
+    }
+    select:hover, .filter-select:hover { border-color: var(--blue); }
+
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    thead th {
+      text-align: left; padding: 10px 16px;
+      font-size: 11px; letter-spacing: .06em; text-transform: uppercase;
+      color: var(--text-3); font-family: var(--sans); font-weight: 600;
+      border-bottom: 1px solid var(--border);
+    }
+    tbody tr {
+      border-bottom: 1px solid var(--border);
+      transition: background .1s;
+    }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: var(--surface2); cursor: pointer; }
+    tbody td { padding: 11px 16px; color: var(--text-2); }
+    .td-ticker { font-family: var(--mono); font-weight: 600; color: var(--text); font-size: 13px; }
+    .td-date { font-family: var(--mono); font-size: 12px; color: var(--text-3); }
+    .td-narrative { max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; color: var(--text-3); }
+
+    .badge {
+      display: inline-block; padding: 2px 8px; border-radius: 99px;
+      font-family: var(--mono); font-size: 11px; font-weight: 500;
+    }
+    .badge-pending   { background: var(--amber-dim); color: var(--amber); }
+    .badge-collecting{ background: var(--blue-dim);  color: var(--blue); }
+    .badge-complete  { background: var(--green-dim); color: var(--green); }
+    .badge-bootstrap { background: var(--surface2);  color: var(--text-3); border: 1px solid var(--border); }
+    .badge-online    { background: var(--blue-dim);  color: var(--blue); }
+
+    .market-tag {
+      display: inline-block; width: 24px; height: 18px; text-align: center; line-height: 18px;
+      border-radius: 3px; font-size: 10px; font-family: var(--mono); font-weight: 600;
+    }
+    .market-A  { background: rgba(239,68,68,.15);  color: #f87171; }
+    .market-HK { background: rgba(59,130,246,.15); color: #60a5fa; }
+    .market-US { background: rgba(245,158,11,.15); color: #fbbf24; }
+
+    /* pagination */
+    .pagination { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-top: 1px solid var(--border); }
+    .page-info { font-family: var(--mono); font-size: 12px; color: var(--text-3); }
+    .page-btns { display: flex; gap: 6px; }
+    .page-btn {
+      padding: 4px 12px; border-radius: var(--radius); border: 1px solid var(--border2);
+      background: transparent; color: var(--text-2); font-size: 12px; font-family: var(--mono);
+      cursor: pointer; transition: all .15s;
+    }
+    .page-btn:hover:not(:disabled) { border-color: var(--blue); color: var(--blue); }
+    .page-btn:disabled { opacity: .3; cursor: not-allowed; }
+
+    /* empty / loading */
+    .empty-state {
+      padding: 48px 24px; text-align: center;
+      color: var(--text-3); font-size: 13px; font-family: var(--mono);
+    }
+    .empty-state .empty-icon { font-size: 28px; margin-bottom: 12px; }
+    .loading-row td { text-align: center; padding: 40px; color: var(--text-3); font-family: var(--mono); font-size: 12px; }
+
+    /* score tooltip / detail drawer */
+    .detail-drawer {
+      position: fixed; right: 0; top: 0; bottom: 0; width: 420px;
+      background: var(--surface); border-left: 1px solid var(--border2);
+      transform: translateX(100%); transition: transform .25s cubic-bezier(.4,0,.2,1);
+      z-index: 100; display: flex; flex-direction: column;
+      overflow: hidden;
+    }
+    .detail-drawer.open { transform: translateX(0); }
+    .drawer-head {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 20px; border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .drawer-title { font-size: 14px; font-weight: 600; }
+    .drawer-close {
+      width: 28px; height: 28px; border-radius: 5px; display: flex; align-items: center; justify-content: center;
+      background: var(--surface2); border: 1px solid var(--border); color: var(--text-2);
+      cursor: pointer; font-size: 16px; line-height: 1;
+    }
+    .drawer-close:hover { border-color: var(--red); color: var(--red); }
+    .drawer-body { overflow-y: auto; padding: 20px; flex: 1; }
+
+    .drawer-section { margin-bottom: 24px; }
+    .drawer-section-title { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--text-3); margin-bottom: 12px; }
+    .agent-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border); }
+    .agent-row:last-child { border-bottom: none; }
+    .agent-id { font-family: var(--mono); font-size: 12px; color: var(--text-2); }
+    .agent-bias {
+      display: flex; align-items: center; gap: 5px;
+      font-family: var(--mono); font-size: 12px; font-weight: 500;
+    }
+    .bias-dot { width: 6px; height: 6px; border-radius: 50%; }
+    .bias-bullish  { background: var(--green); }
+    .bias-bearish  { background: var(--red); }
+    .bias-neutral  { background: var(--amber); }
+    .bias-bullish-text { color: var(--green); }
+    .bias-bearish-text { color: var(--red); }
+    .bias-neutral-text { color: var(--amber); }
+
+    .narrative-box {
+      background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 12px 14px; font-size: 12px; line-height: 1.7; color: var(--text-2);
+      font-family: var(--mono);
+    }
+
+    .score-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .score-mini {
+      background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 10px 12px;
+    }
+    .score-mini-label { font-size: 10px; color: var(--text-3); margin-bottom: 4px; letter-spacing: .04em; text-transform: uppercase; }
+    .score-mini-val { font-family: var(--mono); font-size: 18px; font-weight: 600; }
+
+    /* overlay */
+    .overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,.5);
+      opacity: 0; pointer-events: none; transition: opacity .2s;
+      z-index: 99;
+    }
+    .overlay.show { opacity: 1; pointer-events: all; }
+
+    /* grid weight annotations on chart */
+    .weight-legend {
+      display: flex; gap: 12px; flex-wrap: wrap; margin-top: 12px;
+    }
+    .wl-item { display: flex; align-items: center; gap: 4px; font-family: var(--mono); font-size: 11px; color: var(--text-3); }
+    .wl-dot { width: 8px; height: 8px; border-radius: 2px; background: var(--blue); opacity: .6; }
+
+    /* status strip at bottom of header */
+    .status-strip {
+      display: flex; gap: 20px; font-family: var(--mono); font-size: 12px; color: var(--text-3);
+    }
+    .ss-item { display: flex; align-items: center; gap: 5px; }
+    .ss-val { color: var(--text-2); }
+  </style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- ══ HEADER ══ -->
+  <header>
+    <div class="logo">
+      <div class="logo-mark">PF</div>
+      PYTA
+      <span class="logo-sep">/</span>
+      <span class="logo-sub">FinBenchmark</span>
+    </div>
+    <div class="header-right">
+      <div class="status-strip" id="statusStrip">
+        <span class="ss-item">总用例 <span class="ss-val" id="hTotal">—</span></span>
+        <span class="ss-item">待收集 <span class="ss-val" id="hPending">—</span></span>
+        <span class="ss-item">已完成 <span class="ss-val" id="hComplete">—</span></span>
+      </div>
+      <div class="pulse-wrap">
+        <div class="pulse"></div>
+        <span id="lastRefresh">—</span>
+      </div>
+      <button class="refresh-btn" onclick="refreshAll()">↺ 刷新</button>
+    </div>
+  </header>
+
+  <!-- ══ MAIN ══ -->
+  <main>
+
+    <!-- KPI strip -->
+    <div class="kpi-strip">
+      <div class="kpi-card" style="--accent-color: var(--blue)">
+        <div class="kpi-label">方向准确率 · DA</div>
+        <div class="kpi-value" id="kpi-da">—</div>
+        <div class="kpi-meta" id="kpi-da-meta">样本量 —</div>
+      </div>
+      <div class="kpi-card" style="--accent-color: var(--teal)">
+        <div class="kpi-label">推理质量 · RQ</div>
+        <div class="kpi-value" id="kpi-rq">—</div>
+        <div class="kpi-meta" id="kpi-rq-meta">样本量 —</div>
+      </div>
+      <div class="kpi-card" style="--accent-color: var(--green)">
+        <div class="kpi-label">结论准确率 · RA</div>
+        <div class="kpi-value" id="kpi-ra">—</div>
+        <div class="kpi-meta" id="kpi-ra-meta">样本量 —</div>
+      </div>
+      <div class="kpi-card" style="--accent-color: var(--amber)">
+        <div class="kpi-label">事件对齐 · EA</div>
+        <div class="kpi-value" id="kpi-ea">—</div>
+        <div class="kpi-meta" id="kpi-ea-meta">样本量 —</div>
+      </div>
+    </div>
+
+    <!-- Mid: chart + dimension breakdown -->
+    <div class="mid">
+      <!-- gradient curve -->
+      <div class="panel">
+        <div class="panel-head">
+          <span class="panel-title">方向准确率梯度曲线</span>
+          <div style="display:flex;gap:8px;align-items:center">
+            <select id="curveMarket" onchange="loadGradientCurve()" style="font-size:11px;padding:3px 8px">
+              <option value="">全部市场</option>
+              <option value="A">A股</option>
+              <option value="HK">港股</option>
+              <option value="US">美股</option>
+            </select>
+            <span class="panel-badge">T+1 → T+60</span>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div class="chart-wrap">
+            <canvas id="gradientChart"></canvas>
+          </div>
+          <div class="weight-legend" id="weightLegend"></div>
+        </div>
+      </div>
+
+      <!-- dimension breakdown -->
+      <div class="panel">
+        <div class="panel-head">
+          <span class="panel-title">维度得分</span>
+          <span class="panel-badge">总览</span>
+        </div>
+        <div class="panel-body">
+          <div class="dim-list" id="dimList">
+            <div class="empty-state"><div class="empty-icon">◌</div>暂无评分数据</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Cases table -->
+    <div class="panel cases-section">
+      <div class="panel-head">
+        <span class="panel-title">评测用例</span>
+        <div class="filter-row">
+          <select id="filterStatus" onchange="loadCases(true)">
+            <option value="">全部状态</option>
+            <option value="pending">pending</option>
+            <option value="collecting">collecting</option>
+            <option value="complete">complete</option>
+          </select>
+          <select id="filterSource" onchange="loadCases(true)">
+            <option value="">全部来源</option>
+            <option value="bootstrap">bootstrap</option>
+            <option value="online">online</option>
+          </select>
+          <select id="filterMarket" onchange="loadCases(true)">
+            <option value="">全部市场</option>
+            <option value="A">A股</option>
+            <option value="HK">港股</option>
+            <option value="US">美股</option>
+          </select>
+        </div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>代码</th>
+            <th>市场</th>
+            <th>推演日期</th>
+            <th>状态</th>
+            <th>来源</th>
+            <th>Agents</th>
+            <th>叙事摘要</th>
+          </tr>
+        </thead>
+        <tbody id="casesBody">
+          <tr class="loading-row"><td colspan="7">加载中…</td></tr>
+        </tbody>
+      </table>
+
+      <div class="pagination">
+        <div class="page-info" id="pageInfo">—</div>
+        <div class="page-btns">
+          <button class="page-btn" id="btnPrev" onclick="prevPage()" disabled>‹ 上一页</button>
+          <button class="page-btn" id="btnNext" onclick="nextPage()">下一页 ›</button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Detail drawer -->
+<div class="overlay" id="overlay" onclick="closeDrawer()"></div>
+<div class="detail-drawer" id="drawer">
+  <div class="drawer-head">
+    <div class="drawer-title" id="drawerTitle">用例详情</div>
+    <div class="drawer-close" onclick="closeDrawer()">×</div>
+  </div>
+  <div class="drawer-body" id="drawerBody"></div>
+</div>
+
+<script>
+// ── Config ──────────────────────────────────────────────────────
+const API = '';  // same origin
+const PAGE_SIZE = 20;
+
+// ── State ───────────────────────────────────────────────────────
+let page = 0;
+let totalCases = 0;
+let gradientChart = null;
+let caseCache = {};  // id -> case detail
+
+// ── Boot ────────────────────────────────────────────────────────
+async function refreshAll() {
+  await Promise.all([loadSummary(), loadGradientCurve(), loadCases(true), loadHeaderStats()]);
+  document.getElementById('lastRefresh').textContent =
+    new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+
+refreshAll();
+setInterval(refreshAll, 30000);
+
+// ── Summary KPIs ─────────────────────────────────────────────────
+async function loadSummary() {
+  try {
+    const r = await fetch(`${API}/api/scores/summary`);
+    const d = await r.json();
+    setKpi('da', d.direction_accuracy);
+    setKpi('rq', d.reasoning_quality);
+    setKpi('ra', d.resolution_accuracy);
+    setKpi('ea', d.event_alignment);
+    renderDimList(d);
+  } catch(e) { console.warn('summary err', e); }
+}
+
+function setKpi(key, data) {
+  const valEl  = document.getElementById(`kpi-${key}`);
+  const metaEl = document.getElementById(`kpi-${key}-meta`);
+  if (!data || data.avg_score == null) {
+    valEl.textContent = 'N/A';
+    valEl.classList.add('null-val');
+    metaEl.textContent = `样本量 ${data?.sample_count ?? 0}`;
+    return;
+  }
+  valEl.classList.remove('null-val');
+  const pct = (data.avg_score * 100).toFixed(1);
+  valEl.textContent = pct + '%';
+  metaEl.textContent = `样本量 ${data.sample_count}`;
+  // color by score
+  const accent = pct >= 60 ? 'var(--green)' : pct >= 40 ? 'var(--amber)' : 'var(--red)';
+  valEl.style.color = accent;
+}
+
+function renderDimList(d) {
+  const dims = [
+    { key: 'direction_accuracy', label: '方向准确率 DA', color: 'var(--blue)' },
+    { key: 'reasoning_quality',  label: '推理质量 RQ',   color: 'var(--teal)' },
+    { key: 'resolution_accuracy',label: '结论准确率 RA', color: 'var(--green)' },
+    { key: 'event_alignment',    label: '事件对齐 EA',   color: 'var(--amber)' },
+  ];
+  const el = document.getElementById('dimList');
+  if (!dims.some(x => d[x.key]?.avg_score != null)) {
+    el.innerHTML = '<div class="empty-state"><div class="empty-icon">◌</div>暂无评分数据<br><small style="font-size:11px;margin-top:6px;display:block">Bootstrap 用例评分后显示</small></div>';
+    return;
+  }
+  el.innerHTML = dims.map(dim => {
+    const data = d[dim.key];
+    const pct = data?.avg_score != null ? (data.avg_score * 100).toFixed(1) : null;
+    const barW = pct != null ? pct : 0;
+    const scoreColor = pct != null ? (pct >= 60 ? 'var(--green)' : pct >= 40 ? 'var(--amber)' : 'var(--red)') : '';
+    return `
+      <div class="dim-row">
+        <div class="dim-top">
+          <span class="dim-name">${dim.label}</span>
+          <span class="dim-score ${pct == null ? 'null-score' : ''}" style="color:${scoreColor}">${pct != null ? pct + '%' : 'N/A'}</span>
+        </div>
+        <div class="dim-bar-bg">
+          <div class="dim-bar-fill" style="width:${barW}%;background:${dim.color}"></div>
+        </div>
+        <div class="dim-count">${data?.sample_count ?? 0} 条评分</div>
+      </div>`;
+  }).join('');
+}
+
+// ── Gradient Curve ───────────────────────────────────────────────
+const HORIZONS = [1, 2, 3, 5, 10, 30, 60];
+const HORIZON_LABELS = ['T+1', 'T+2', 'T+3', 'T+5', 'T+10', 'T+30', 'T+60'];
+const GRADIENT_WEIGHTS = { 1: 2.0, 2: 1.8, 3: 1.6, 5: 1.4, 10: 1.0, 30: 0.7, 60: 0.5 };
+
+async function loadGradientCurve() {
+  const market = document.getElementById('curveMarket').value;
+  const params = market ? `?market=${market}` : '';
+  try {
+    const r = await fetch(`${API}/api/scores/gradient-curve${params}`);
+    const d = await r.json();
+    renderGradientChart(d);
+    renderWeightLegend(d.gradient_weights || GRADIENT_WEIGHTS);
+  } catch(e) {
+    renderGradientChart(null);
+  }
+}
+
+function renderGradientChart(data) {
+  const ctx = document.getElementById('gradientChart').getContext('2d');
+  const hasData = data && HORIZONS.some(h => data.avg_da_by_horizon?.[String(h)] != null);
+
+  const scores = HORIZONS.map(h => {
+    const v = data?.avg_da_by_horizon?.[String(h)];
+    return v != null ? +(v * 100).toFixed(2) : null;
+  });
+
+  // weight bars as background dataset
+  const weights = HORIZONS.map(h => (GRADIENT_WEIGHTS[h] || 1) * 20); // scale to ~% visual
+
+  if (gradientChart) gradientChart.destroy();
+
+  Chart.defaults.color = '#475569';
+  Chart.defaults.font.family = "'JetBrains Mono', monospace";
+  Chart.defaults.font.size = 11;
+
+  gradientChart = new Chart(ctx, {
+    data: {
+      labels: HORIZON_LABELS,
+      datasets: [
+        {
+          type: 'bar',
+          label: '权重×20',
+          data: weights,
+          backgroundColor: 'rgba(59,130,246,0.06)',
+          borderColor: 'rgba(59,130,246,0.15)',
+          borderWidth: 1,
+          borderRadius: 3,
+          yAxisID: 'yWeight',
+          order: 2,
+        },
+        {
+          type: 'line',
+          label: '平均 DA %',
+          data: scores,
+          borderColor: hasData ? '#3b82f6' : 'rgba(59,130,246,0.2)',
+          backgroundColor: hasData
+            ? 'rgba(59,130,246,0.08)'
+            : 'rgba(59,130,246,0.03)',
+          borderWidth: 2,
+          pointBackgroundColor: hasData ? '#3b82f6' : 'rgba(59,130,246,0.3)',
+          pointBorderColor: hasData ? '#07090f' : 'rgba(59,130,246,0.3)',
+          pointBorderWidth: 2,
+          pointRadius: hasData ? 5 : 3,
+          pointHoverRadius: hasData ? 7 : 3,
+          tension: 0.35,
+          fill: true,
+          spanGaps: true,
+          yAxisID: 'y',
+          order: 1,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#0c1018',
+          borderColor: '#1a2535',
+          borderWidth: 1,
+          titleColor: '#94a3b8',
+          bodyColor: '#e2e8f0',
+          padding: 10,
+          callbacks: {
+            title: ctx => `T+${HORIZONS[ctx[0].dataIndex]}`,
+            label: item => {
+              if (item.datasetIndex === 1) {
+                const v = item.raw;
+                return v != null ? `DA: ${v.toFixed(1)}%` : '暂无数据';
+              }
+              return `权重: ×${GRADIENT_WEIGHTS[HORIZONS[item.dataIndex]]}`;
+            },
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid: { color: '#1a2535', drawBorder: false },
+          ticks: { color: '#475569' },
+        },
+        y: {
+          position: 'left',
+          min: 0, max: 100,
+          grid: { color: '#1a2535', drawBorder: false },
+          ticks: {
+            color: '#475569',
+            callback: v => v + '%',
+          },
+        },
+        yWeight: {
+          position: 'right',
+          display: false,
+          min: 0, max: 60,
+          grid: { display: false },
+        },
+      },
+    },
+  });
+
+  // empty state annotation
+  if (!hasData) {
+    const overlay = document.querySelector('.chart-wrap');
+    const existing = overlay.querySelector('.chart-empty');
+    if (!existing) {
+      const msg = document.createElement('div');
+      msg.className = 'chart-empty';
+      msg.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:12px;color:var(--text-3);pointer-events:none';
+      msg.textContent = '评分数据收集后显示';
+      overlay.appendChild(msg);
+    }
+  } else {
+    const existing = document.querySelector('.chart-empty');
+    if (existing) existing.remove();
+  }
+}
+
+function renderWeightLegend(weights) {
+  const el = document.getElementById('weightLegend');
+  el.innerHTML = HORIZONS.map(h =>
+    `<span class="wl-item"><span class="wl-dot"></span>T+${h} ×${weights[h] ?? '—'}</span>`
+  ).join('');
+}
+
+// ── Cases Table ──────────────────────────────────────────────────
+async function loadCases(reset) {
+  if (reset) page = 0;
+  const status = document.getElementById('filterStatus').value;
+  const source = document.getElementById('filterSource').value;
+  const market = document.getElementById('filterMarket').value;
+
+  const params = new URLSearchParams({ limit: PAGE_SIZE, offset: page * PAGE_SIZE });
+  if (status) params.set('status', status);
+  if (source) params.set('source', source);
+
+  try {
+    const r = await fetch(`${API}/api/cases/?${params}`);
+    const d = await r.json();
+    totalCases = d.total;
+
+    // filter market client-side (API doesn't support it yet)
+    let items = d.items;
+    if (market) items = items.filter(c => c.market === market);
+
+    renderCasesTable(items);
+    renderPagination(d.total);
+    renderHeaderStats(d);
+  } catch(e) {
+    document.getElementById('casesBody').innerHTML =
+      '<tr class="loading-row"><td colspan="7" style="color:var(--red)">加载失败，请检查服务是否运行</td></tr>';
+  }
+}
+
+async function loadHeaderStats() {
+  try {
+    const [all, pending, complete] = await Promise.all([
+      fetch(`${API}/api/cases/?limit=1`).then(r => r.json()),
+      fetch(`${API}/api/cases/?limit=1&status=pending`).then(r => r.json()),
+      fetch(`${API}/api/cases/?limit=1&status=complete`).then(r => r.json()),
+    ]);
+    document.getElementById('hTotal').textContent = all.total;
+    document.getElementById('hPending').textContent = pending.total;
+    document.getElementById('hComplete').textContent = complete.total;
+  } catch(e) {}
+}
+
+function renderHeaderStats(d) {
+  // called after table load; trigger header stats separately
+}
+
+function renderCasesTable(items) {
+  const tbody = document.getElementById('casesBody');
+  if (!items.length) {
+    tbody.innerHTML = '<tr class="loading-row"><td colspan="7" style="color:var(--text-3)">无匹配用例</td></tr>';
+    return;
+  }
+  tbody.innerHTML = items.map(c => {
+    const date = c.run_timestamp.split('T')[0];
+    const narrative = c.narrative_preview || c.run_id.replace(/^bootstrap-/, '');
+    return `
+      <tr onclick="openCase('${c.id}')">
+        <td class="td-ticker">${c.ticker}</td>
+        <td><span class="market-tag market-${c.market}">${c.market}</span></td>
+        <td class="td-date">${date}</td>
+        <td><span class="badge badge-${c.status}">${c.status}</span></td>
+        <td><span class="badge badge-${c.source}">${c.source}</span></td>
+        <td style="font-family:var(--mono);font-size:12px;color:var(--text-3)">${c.agent_count}</td>
+        <td class="td-narrative">${escHtml(narrative)}</td>
+      </tr>`;
+  }).join('');
+}
+
+function renderPagination(total) {
+  const start = page * PAGE_SIZE + 1;
+  const end = Math.min((page + 1) * PAGE_SIZE, total);
+  document.getElementById('pageInfo').textContent = `${start}–${end} / ${total}`;
+  document.getElementById('btnPrev').disabled = page === 0;
+  document.getElementById('btnNext').disabled = end >= total;
+}
+
+function prevPage() { if (page > 0) { page--; loadCases(false); } }
+function nextPage() { page++; loadCases(false); }
+
+// ── Case detail drawer ───────────────────────────────────────────
+async function openCase(id) {
+  document.getElementById('drawer').classList.add('open');
+  document.getElementById('overlay').classList.add('show');
+  document.getElementById('drawerBody').innerHTML = '<div class="empty-state">加载中…</div>';
+
+  try {
+    const [caseData, scores] = await Promise.all([
+      fetch(`${API}/api/cases/${id}`).then(r => r.json()),
+      fetch(`${API}/api/scores/case/${id}`).then(r => r.json()),
+    ]);
+    renderDrawer(caseData, scores);
+  } catch(e) {
+    document.getElementById('drawerBody').innerHTML = '<div class="empty-state" style="color:var(--red)">加载失败</div>';
+  }
+}
+
+function renderDrawer(c, scores) {
+  document.getElementById('drawerTitle').textContent = `${c.ticker} · ${c.run_timestamp.split('T')[0]}`;
+
+  const agentsHTML = (c.agent_snapshots || []).length
+    ? (c.agent_snapshots || []).map(a => `
+        <div class="agent-row">
+          <span class="agent-id">${a.agent_id || '—'}</span>
+          <span class="agent-bias">
+            <span class="bias-dot bias-${a.bias}"></span>
+            <span class="bias-${a.bias}-text">${a.bias}</span>
+            <span style="color:var(--text-3);margin-left:4px">${a.confidence != null ? (a.confidence * 100).toFixed(0) + '%' : ''}</span>
+          </span>
+        </div>`).join('')
+    : '<div style="font-size:12px;color:var(--text-3);font-family:var(--mono);padding:8px 0">无 Agent 快照（Bootstrap 历史用例）</div>';
+
+  // score grid
+  const scoresHTML = scores.length
+    ? `<div class="score-grid">${scores.map(s => {
+        const pct = (s.score * 100).toFixed(1);
+        const color = pct >= 60 ? 'var(--green)' : pct >= 40 ? 'var(--amber)' : 'var(--red)';
+        return `
+          <div class="score-mini">
+            <div class="score-mini-label">${s.dimension}${s.horizon_days ? ' T+' + s.horizon_days : ''}</div>
+            <div class="score-mini-val" style="color:${color}">${pct}%</div>
+            <div style="font-size:10px;color:var(--text-3);font-family:var(--mono);margin-top:3px">${s.scorer_type}</div>
+          </div>`;
+      }).join('')}</div>`
+    : '<div style="font-size:12px;color:var(--text-3);font-family:var(--mono)">暂无评分 — 等待 GT 收集完成</div>';
+
+  document.getElementById('drawerBody').innerHTML = `
+    <div class="drawer-section">
+      <div class="drawer-section-title">基本信息</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+        <div class="score-mini">
+          <div class="score-mini-label">状态</div>
+          <div><span class="badge badge-${c.status}">${c.status}</span></div>
+        </div>
+        <div class="score-mini">
+          <div class="score-mini-label">来源</div>
+          <div><span class="badge badge-${c.source}">${c.source}</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="drawer-section">
+      <div class="drawer-section-title">叙事输入</div>
+      <div class="narrative-box">${escHtml(c.input_narrative || '（无）')}</div>
+    </div>
+
+    <div class="drawer-section">
+      <div class="drawer-section-title">Agent 快照 · ${(c.agent_snapshots || []).length} 个</div>
+      ${agentsHTML}
+    </div>
+
+    <div class="drawer-section">
+      <div class="drawer-section-title">评分结果 · ${scores.length} 条</div>
+      ${scoresHTML}
+    </div>
+  `;
+}
+
+function closeDrawer() {
+  document.getElementById('drawer').classList.remove('open');
+  document.getElementById('overlay').classList.remove('show');
+}
+
+// ── Utils ────────────────────────────────────────────────────────
+function escHtml(str) {
+  return String(str)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>
