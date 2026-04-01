@@ -30,6 +30,7 @@
 - 已完成接口与脚本实现
 - 已完成本地代码级验证
 - 已完成 5 条 bootstrap case 真实 replay smoke test
+- 已启动 bootstrap 全量 replay，当前进度 `23 / 25`
 
 ## 实际落地
 
@@ -69,7 +70,16 @@
   - `f02078a2-41cb-413c-b321-45649ccf3567`
   - `run_id = bootstrap-688256.SH-2026-01-15`
 
+### 全量 replay 进展
+
+- 已启动 `--limit 25` 的全量 bootstrap replay
+- 当前已回填 `23 / 25`
+- 这说明：
+  - replay 脚本可持续执行
+  - `PATCH /snapshots` 回填链路正常
+  - eval-service dashboard 已能消费大多数 bootstrap snapshots
+
 ## 未完成项
 
-- 剩余 bootstrap case 全量 replay
+- 剩余 `2` 条 bootstrap case 回填完成确认
 - 如有需要，再触发 GT 收集与后续评分链验证

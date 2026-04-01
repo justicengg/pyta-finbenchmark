@@ -1,41 +1,121 @@
-# pyta-eval
+# PYTA Eval Service
 
-PYTA 推演质量评测服务。独立于主后端运行。
+Independent evaluation service for PYTA sandbox runs.
 
-## 启动
+It receives completed sandbox outputs, stores eval cases, collects ground truth over time, and computes quality scores for internal benchmarking.
+
+## Features
+
+- webhook intake for completed sandbox runs
+- manual bootstrap case creation for historical replay
+- case detail and snapshot backfill APIs
+- score summary and gradient endpoints for dashboard use
+- local dashboard for inspection and debugging
+
+## Tech Stack
+
+- FastAPI
+- SQLAlchemy
+- APScheduler
+- SQLite by default
+
+## Project Structure
+
+```text
+app/
+  api/         FastAPI routers
+  db/          database session and models
+  jobs/        scheduled jobs
+  models/      eval_case / ground_truth / score
+  services/    scoring and data-source services
+dashboard/     local dashboard frontend
+scripts/       bootstrap and replay utilities
+tests/         minimal API tests
+```
+
+## Quick Start
 
 ```bash
 cp .env.example .env
-# 填写 .env 中的配置
+```
 
-poetry install
-alembic upgrade head
+Fill the required env values, then start the service:
+
+```bash
 uvicorn app.main:app --reload --port 8001
 ```
 
-主后端运行在 8000，eval service 运行在 8001。
+Useful local URLs:
 
-## 核心端点
+- Health: `http://127.0.0.1:8001/health`
+- Dashboard: `http://127.0.0.1:8001/dashboard`
+- OpenAPI: `http://127.0.0.1:8001/openapi.json`
 
-| 方法 | 路径 | 说明 |
+## Environment Variables
+
+Common variables:
+
+- `DATABASE_URL`
+- `ANTHROPIC_API_KEY`
+- `JUDGE_MODEL`
+- `MAIN_BACKEND_WEBHOOK_SECRET`
+- `TUSHARE_TOKEN`
+
+See `.env.example` for the current baseline.
+
+## Core API Endpoints
+
+| Method | Path | Purpose |
 |------|------|------|
-| POST | /api/webhook/sandbox-run-completed | 接收主后端推送 |
-| POST | /api/cases/bootstrap | 手动创建历史用例 |
-| GET | /api/cases/ | 查询用例列表 |
-| GET | /api/scores/gradient-curve | 梯度准确率曲线 |
-| GET | /api/scores/summary | 各维度汇总分数 |
-| GET | /health | 健康检查 |
+| `POST` | `/api/webhook/sandbox-run-completed` | ingest completed sandbox run |
+| `POST` | `/api/cases/bootstrap` | create historical bootstrap case |
+| `GET` | `/api/cases/` | list cases |
+| `GET` | `/api/cases/{case_id}` | get case detail |
+| `PATCH` | `/api/cases/{case_id}/snapshots` | backfill bootstrap snapshots |
+| `GET` | `/api/scores/summary` | overall score summary |
+| `GET` | `/api/scores/gradient-curve` | T+n gradient scoring view |
 
-## 手动触发任务
+## Common Development Commands
+
+Start the service:
 
 ```bash
-# 立即执行 ground truth 收集（不等定时任务）
-python -c "from app.jobs.collect_gt import run; run()"
+uvicorn app.main:app --reload --port 8001
+```
 
-# 立即执行评分
+Run bootstrap replay smoke test:
+
+```bash
+NO_PROXY=127.0.0.1,localhost EVAL_SERVICE_URL=http://127.0.0.1:8001 MAIN_BACKEND_URL=http://127.0.0.1:8010 .venv/bin/python scripts/replay_bootstrap_cases.py --limit 5
+```
+
+Run bootstrap replay batch:
+
+```bash
+NO_PROXY=127.0.0.1,localhost EVAL_SERVICE_URL=http://127.0.0.1:8001 MAIN_BACKEND_URL=http://127.0.0.1:8010 .venv/bin/python scripts/replay_bootstrap_cases.py --limit 25
+```
+
+Run ground-truth collection manually:
+
+```bash
+python -c "from app.jobs.collect_gt import run; run()"
+```
+
+Run scoring manually:
+
+```bash
 python -c "from app.jobs.run_scoring import run; run()"
 ```
 
-## 设计文档
+Run tests:
 
-见主仓库：`doc/claude/task/2026-04-01-CC-eval-system-design.md`
+```bash
+.venv/bin/python -m py_compile app/api/routers/cases.py scripts/replay_bootstrap_cases.py tests/test_cases_api.py
+.venv/bin/python -c "from tests.test_cases_api import test_case_detail_and_snapshot_patch; test_case_detail_and_snapshot_patch(); print('test_cases_api ok')"
+```
+
+## Notes
+
+- This service is intentionally separated from the main backend.
+- The dashboard is an inspection surface, not the source of truth.
+- Design and implementation notes live under `doc/claude/task/`.
