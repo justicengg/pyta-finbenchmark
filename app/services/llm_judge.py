@@ -11,10 +11,12 @@ import logging
 import anthropic
 
 from app.config import settings
+from app.services.runtime_settings import get_judge_runtime_config_without_session
 
 logger = logging.getLogger(__name__)
 
 _client: anthropic.Anthropic | None = None
+_client_api_key: str | None = None
 
 
 class LLMJudgeUnavailable(RuntimeError):
@@ -22,11 +24,14 @@ class LLMJudgeUnavailable(RuntimeError):
 
 
 def _get_client() -> anthropic.Anthropic:
-    global _client
-    if not settings.anthropic_api_key:
+    global _client, _client_api_key
+    config = get_judge_runtime_config_without_session()
+    api_key = str(config["api_key"] or "")
+    if not api_key:
         raise LLMJudgeUnavailable("ANTHROPIC_API_KEY is not configured")
-    if _client is None:
-        _client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
+    if _client is None or _client_api_key != api_key:
+        _client = anthropic.Anthropic(api_key=api_key)
+        _client_api_key = api_key
     return _client
 
 
@@ -97,9 +102,10 @@ def score_reasoning(
         observations="; ".join(agent_snapshot.get("observations", [])),
     )
 
+    runtime_config = get_judge_runtime_config_without_session()
     client = _get_client()
     message = client.messages.create(
-        model=settings.judge_model,
+        model=str(runtime_config["judge_model"] or settings.judge_model),
         max_tokens=512,
         system=SYSTEM_PROMPT,
         messages=[{"role": "user", "content": prompt}],
@@ -118,5 +124,5 @@ def score_reasoning(
     )
     result["total"] = total
     result["score"] = round(total / 100, 4)
-    result["model"] = settings.judge_model
+    result["model"] = str(runtime_config["judge_model"] or settings.judge_model)
     return result
