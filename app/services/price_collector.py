@@ -154,6 +154,7 @@ def _fetch_akshare(ticker: str, market: str, target_date: date) -> dict | None:
 
 def _fetch_yfinance(ticker: str, market: str, target_date: date) -> dict | None:
     import yfinance as yf  # type: ignore
+    import pandas as pd  # type: ignore
 
     yf_ticker = _to_yfinance_ticker(ticker, market)
     start = target_date
@@ -164,8 +165,15 @@ def _fetch_yfinance(ticker: str, market: str, target_date: date) -> dict | None:
         return None
 
     row = df.iloc[0]
-    open_price = float(row["Open"])
-    close_price = float(row["Close"])
+    open_value = row["Open"]
+    close_value = row["Close"]
+    if isinstance(open_value, pd.Series):
+        open_value = open_value.iloc[0]
+    if isinstance(close_value, pd.Series):
+        close_value = close_value.iloc[0]
+
+    open_price = float(open_value)
+    close_price = float(close_value)
     if open_price == 0:
         return None
     change_pct = (close_price - open_price) / open_price * 100
