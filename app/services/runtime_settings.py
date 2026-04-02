@@ -8,7 +8,7 @@ from app.config import settings
 from app.db import SessionLocal
 from app.models import AppSetting
 
-JudgeProvider = Literal["anthropic", "openai", "openrouter", "custom"]
+JudgeProvider = Literal["anthropic", "openai", "openrouter", "minimax", "moonshot", "zai", "custom"]
 JudgeApiFormat = Literal["anthropic", "openai_compatible", "custom"]
 
 JUDGE_PROVIDER_KEY = "judge.provider"

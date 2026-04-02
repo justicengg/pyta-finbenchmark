@@ -132,6 +132,12 @@ def _default_openai_base_url(provider: str) -> str:
         return DEFAULT_OPENROUTER_BASE_URL
     if provider == "openai":
         return DEFAULT_OPENAI_BASE_URL
+    if provider == "minimax":
+        return "https://api.minimax.io/v1"
+    if provider == "moonshot":
+        return "https://api.moonshot.cn/v1"
+    if provider == "zai":
+        return "https://api.z.ai/api/paas/v4/"
     return ""
 
 

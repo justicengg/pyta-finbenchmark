@@ -20,7 +20,7 @@ from app.services.runtime_settings import (
 
 router = APIRouter(prefix="/settings", tags=["settings"])
 
-JudgeProvider = Literal["anthropic", "openai", "openrouter", "custom"]
+JudgeProvider = Literal["anthropic", "openai", "openrouter", "minimax", "moonshot", "zai", "custom"]
 JudgeApiFormat = Literal["anthropic", "openai_compatible", "custom"]
 
 

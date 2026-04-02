@@ -498,10 +498,13 @@
   <div class="settings-body">
     <div>
       <label class="settings-label" for="judgeProvider">Provider</label>
-      <select class="settings-input" id="judgeProvider">
+      <select class="settings-input" id="judgeProvider" onchange="syncProviderDefaults(true)">
         <option value="anthropic">Anthropic</option>
         <option value="openrouter">OpenRouter</option>
         <option value="openai">OpenAI</option>
+        <option value="minimax">MiniMax</option>
+        <option value="moonshot">Moonshot AI (Kimi)</option>
+        <option value="zai">Z.ai (GLM / 智谱)</option>
         <option value="custom">Custom</option>
       </select>
     </div>
@@ -596,6 +599,7 @@ async function loadJudgeSettings() {
 }
 
 function openSettings() {
+  syncProviderDefaults(false);
   document.getElementById('settingsModal').classList.add('open');
   document.getElementById('settingsOverlay').classList.add('show');
 }
@@ -636,6 +640,28 @@ async function saveJudgeSettings() {
     await loadJudgeSettings();
   } catch (e) {
     document.getElementById('settingsStatus').textContent = '保存失败';
+  }
+}
+
+function syncProviderDefaults(forceBaseUrl = false) {
+  const provider = document.getElementById('judgeProvider').value;
+  const apiFormatEl = document.getElementById('judgeApiFormat');
+  const baseUrlEl = document.getElementById('judgeBaseUrl');
+
+  const defaults = {
+    anthropic: { apiFormat: 'anthropic', baseUrl: '' },
+    openai: { apiFormat: 'openai_compatible', baseUrl: 'https://api.openai.com/v1' },
+    openrouter: { apiFormat: 'openai_compatible', baseUrl: 'https://openrouter.ai/api/v1' },
+    minimax: { apiFormat: 'openai_compatible', baseUrl: 'https://api.minimax.io/v1' },
+    moonshot: { apiFormat: 'openai_compatible', baseUrl: 'https://api.moonshot.cn/v1' },
+    zai: { apiFormat: 'openai_compatible', baseUrl: 'https://api.z.ai/api/paas/v4/' },
+    custom: { apiFormat: 'openai_compatible', baseUrl: '' },
+  };
+
+  const selected = defaults[provider] || defaults.custom;
+  apiFormatEl.value = selected.apiFormat;
+  if (forceBaseUrl || !baseUrlEl.value.trim()) {
+    baseUrlEl.value = selected.baseUrl;
   }
 }
 

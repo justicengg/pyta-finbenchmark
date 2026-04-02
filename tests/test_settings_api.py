@@ -123,3 +123,27 @@ def test_legacy_database_key_is_still_supported():
     assert body["configured"] is True
     assert body["configured_via_settings"] is True
     assert "api_key" not in body
+
+
+def test_provider_specific_settings_for_moonshot_are_accepted():
+    client, _ = build_test_client()
+
+    update = client.put(
+        "/api/settings/judge",
+        json={
+            "provider": "moonshot",
+            "api_key": "moonshot-key",
+            "model": "moonshot-v1-8k",
+            "base_url": "https://api.moonshot.cn/v1",
+            "api_format": "openai_compatible",
+            "enabled": True,
+        },
+    )
+    assert update.status_code == 200
+    body = update.json()
+    assert body["provider"] == "moonshot"
+    assert body["model"] == "moonshot-v1-8k"
+    assert body["base_url"] == "https://api.moonshot.cn/v1"
+    assert body["api_format"] == "openai_compatible"
+    assert body["configured"] is True
+    assert "api_key" not in body

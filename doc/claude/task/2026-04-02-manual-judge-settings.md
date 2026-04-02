@@ -35,3 +35,13 @@
 3. `reasoning_quality` 不再依赖手改 `.env`
 4. 旧版 Anthropic-only 请求仍可继续工作
 5. OpenRouter 这类第三方兼容网关可通过 `base_url + api_format` 接入
+
+## 当前 provider 列表
+
+1. `anthropic`
+2. `openai`
+3. `openrouter`
+4. `minimax`
+5. `moonshot`
+6. `zai`
+7. `custom`
