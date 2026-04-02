@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Poetry
+        run: pip install poetry
+
+      - name: Install dependencies
+        run: poetry install --no-interaction --no-root
+
+      - name: Run tests
+        run: poetry run pytest -q
+
+      - name: Compile key modules
+        run: |
+          poetry run python -m py_compile \
+            app/api/routers/cases.py \
+            app/api/routers/settings.py \
+            app/api/routers/webhook.py \
+            app/services/price_collector.py \
+            app/services/runtime_settings.py \
+            app/services/judge_runtime.py \
+            app/services/judge_client_factory.py \
+            app/services/llm_judge.py \
+            app/services/scorer.py \
+            scripts/load_bootstrap_cases.py \
+            scripts/replay_bootstrap_cases.py \
+            tests/test_cases_api.py \
+            tests/test_judge_provider.py \
+            tests/test_price_collector.py \
+            tests/test_settings_api.py
