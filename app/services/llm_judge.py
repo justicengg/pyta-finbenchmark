@@ -17,8 +17,14 @@ logger = logging.getLogger(__name__)
 _client: anthropic.Anthropic | None = None
 
 
+class LLMJudgeUnavailable(RuntimeError):
+    """Raised when the judge cannot run due to local configuration."""
+
+
 def _get_client() -> anthropic.Anthropic:
     global _client
+    if not settings.anthropic_api_key:
+        raise LLMJudgeUnavailable("ANTHROPIC_API_KEY is not configured")
     if _client is None:
         _client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
     return _client

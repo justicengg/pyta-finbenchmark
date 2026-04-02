@@ -13,6 +13,7 @@ from app.models import EvalCase, EvalScore, GroundTruth
 from app.services import llm_judge
 
 logger = logging.getLogger(__name__)
+_reasoning_judge_unavailable_logged = False
 
 # Gradient weights: reward early accuracy (T+10 = 1.0 baseline)
 GRADIENT_WEIGHTS: dict[int, float] = {
@@ -146,6 +147,7 @@ def _score_resolution_accuracy(
 # ── Reasoning Quality ──────────────────────────────────────────────────────────
 
 def _score_reasoning_quality(case: EvalCase, db: Session) -> None:
+    global _reasoning_judge_unavailable_logged
     agents: list[dict] = case.agent_snapshots or []
 
     for agent in agents:
@@ -169,6 +171,11 @@ def _score_reasoning_quality(case: EvalCase, db: Session) -> None:
                 score_details=result,
                 scored_at=datetime.utcnow(),
             ))
+        except llm_judge.LLMJudgeUnavailable as exc:
+            if not _reasoning_judge_unavailable_logged:
+                logger.warning("Skipping reasoning_quality scoring: %s", exc)
+                _reasoning_judge_unavailable_logged = True
+            break
         except Exception as exc:
             logger.error("LLM judge failed for agent %s in case %s: %s", agent_id, case.id, exc)
 
