@@ -32,3 +32,37 @@
 1. 单条 `cross_verify(...)` 不再无限等待
 2. `collect_gt` 能在可接受时间内结束
 3. 数据库中 `ground_truth` 数量开始增加
+
+## 实际结果
+
+本轮已完成：
+
+1. 为价格抓取链增加超时保护
+2. 修正 A 股 yfinance ticker 映射
+3. 修正 yfinance 返回值解析中的 `Series -> float` 问题
+4. 将 GT 收集默认顺序改为快源优先
+
+当前已验证：
+
+1. `ground_truth` 已从 `0` 增长到 `13`
+2. `scores` 已从 `0` 增长到 `37`
+3. dashboard summary 已出现真实数据：
+   - `direction_accuracy.avg_score = 0.4857`
+   - `resolution_accuracy.avg_score = 0.25`
+4. gradient curve 已出现可用点位
+
+## 仍然存在的问题
+
+1. `reasoning_quality` 仍然为 `null`
+2. 根因不是评分主流程，而是 LLM judge 当前缺少认证配置
+3. `event_alignment` 当前也尚未产出有效评分
+
+## 结论
+
+这一轮已经把系统从“GT 完全卡住”推进到“部分评分可见、dashboard 开始出数”。
+
+下一步若继续，应优先处理：
+
+1. LLM judge 认证配置
+2. `reasoning_quality` 评分恢复
+3. GT 全量收集完成后的二次 scoring

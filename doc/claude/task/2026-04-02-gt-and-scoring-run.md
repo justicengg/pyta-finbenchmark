@@ -30,10 +30,10 @@
 1. 已确认 bootstrap 样本中不存在 `600036.SH`（招商银行）
 2. 已手动触发 `collect_gt`
 3. 已手动触发 `run_scoring`
-4. 当前数据库状态仍为：
-   - `ground_truth = 0`
-   - `scores = 0`
-   - `status = pending`
+4. 当前数据库状态已推进为：
+   - `ground_truth = 13`
+   - `scores = 37`
+   - `status` 已出现 `collecting / complete`
 
 ## 当前阻塞点
 
@@ -47,14 +47,16 @@
 
 ## 结论
 
-当前不能继续得到有效评分结果，原因是：
+当前已经可以得到部分有效评分结果，但还没有全维度完整评分。
 
-1. ground truth 尚未成功落库
-2. 没有可评分的 complete case
-3. `run_scoring` 当前只是空跑验证
+已确认：
 
-后续若继续推进，应优先排查：
+1. `direction_accuracy` 已开始产出
+2. `resolution_accuracy` 已开始产出
+3. `reasoning_quality` 仍未产出
 
-1. `price_collector.py` 的外部数据源超时与降级策略
-2. AKShare / yfinance 在当前环境中的可用性
-3. GT 收集是否需要先做单源、短超时版本
+当前剩余阻塞点变为：
+
+1. LLM judge 缺少认证配置
+2. GT 尚未全量完成
+3. `event_alignment` 仍未进入有效评分

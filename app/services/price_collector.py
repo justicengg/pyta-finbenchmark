@@ -13,7 +13,7 @@ from datetime import date, timedelta
 logger = logging.getLogger(__name__)
 
 FLAT_THRESHOLD = 0.005  # ±0.5% counts as flat
-FETCH_TIMEOUT_SECONDS = 8.0
+FETCH_TIMEOUT_SECONDS = 2.0
 
 
 def get_price_direction(
@@ -34,7 +34,7 @@ def get_price_direction(
             "source": "akshare"|"tushare"|"yfinance",
         }
     """
-    for fetch_fn in (_fetch_akshare, _fetch_yfinance):
+    for fetch_fn in _fetch_chain():
         result = _run_fetch_with_timeout(fetch_fn, ticker, market, target_date)
         if result:
             return result
@@ -47,7 +47,7 @@ def cross_verify(ticker: str, market: str, target_date: date) -> dict | None:
     Returns result with needs_review=True if sources disagree by >0.3%.
     """
     results = []
-    for fetch_fn in (_fetch_akshare, _fetch_yfinance):
+    for fetch_fn in _fetch_chain():
         result = _run_fetch_with_timeout(fetch_fn, ticker, market, target_date)
         if result:
             results.append(result)
@@ -102,6 +102,11 @@ def _run_fetch_with_timeout(fetch_fn, ticker: str, market: str, target_date: dat
         return None
 
     return payload
+
+
+def _fetch_chain():
+    # Use the faster public source first so GT collection can complete in bounded time.
+    return (_fetch_yfinance, _fetch_akshare)
 
 
 # ── AKShare ────────────────────────────────────────────────────────────────────
