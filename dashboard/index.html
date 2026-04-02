@@ -497,16 +497,45 @@
   </div>
   <div class="settings-body">
     <div>
-      <label class="settings-label" for="judgeApiKey">Anthropic API Key</label>
+      <label class="settings-label" for="judgeProvider">Provider</label>
+      <select class="settings-input" id="judgeProvider">
+        <option value="anthropic">Anthropic</option>
+        <option value="openrouter">OpenRouter</option>
+        <option value="openai">OpenAI</option>
+        <option value="custom">Custom</option>
+      </select>
+    </div>
+    <div>
+      <label class="settings-label" for="judgeApiKey">API Key</label>
       <input class="settings-input" id="judgeApiKey" type="password" placeholder="输入你自己的 API Key" />
     </div>
     <div>
-      <label class="settings-label" for="judgeModel">Judge Model</label>
+      <label class="settings-label" for="judgeModel">Model</label>
       <input class="settings-input" id="judgeModel" type="text" placeholder="claude-opus-4-6" />
+    </div>
+    <div>
+      <label class="settings-label" for="judgeBaseUrl">Base URL</label>
+      <input class="settings-input" id="judgeBaseUrl" type="text" placeholder="可选，OpenRouter / 自定义兼容接口可填写" />
+    </div>
+    <div>
+      <label class="settings-label" for="judgeApiFormat">API Format</label>
+      <select class="settings-input" id="judgeApiFormat">
+        <option value="anthropic">Anthropic</option>
+        <option value="openai_compatible">OpenAI Compatible</option>
+        <option value="custom">Custom</option>
+      </select>
+    </div>
+    <div>
+      <label class="settings-label" for="judgeEnabled">启用 Judge</label>
+      <select class="settings-input" id="judgeEnabled">
+        <option value="true">启用</option>
+        <option value="false">停用</option>
+      </select>
     </div>
     <div class="settings-help">
       API key 只保存到服务端设置中，前端不会回显明文。<br />
-      当前设置只用于 `reasoning_quality` 的 Judge 评分。
+      当前设置只用于 `reasoning_quality` 的 Judge 评分。<br />
+      如果使用 OpenRouter 或其他兼容网关，请同时填写对应的 Provider / Base URL / API Format。
     </div>
     <div class="settings-status" id="settingsStatus">未加载</div>
   </div>
@@ -553,10 +582,14 @@ async function loadJudgeSettings() {
       pill.classList.remove('configured');
       text.textContent = 'Judge 未配置';
     }
+    document.getElementById('judgeProvider').value = d.provider || 'anthropic';
     document.getElementById('judgeModel').value = d.judge_model || '';
+    document.getElementById('judgeBaseUrl').value = d.base_url || '';
+    document.getElementById('judgeApiFormat').value = d.api_format || 'anthropic';
+    document.getElementById('judgeEnabled').value = String(d.enabled ?? false);
     document.getElementById('settingsStatus').textContent = d.configured
-      ? '当前已配置 Judge API Key'
-      : '当前未配置 Judge API Key';
+      ? `当前已配置 ${d.provider || 'judge'} · ${d.judge_model || '默认模型'}`
+      : '当前未配置可用的 Judge API Key';
   } catch (e) {
     document.getElementById('judgePillText').textContent = 'Judge 设置读取失败';
   }
@@ -573,16 +606,25 @@ function closeSettings() {
 }
 
 async function saveJudgeSettings() {
+  const provider = document.getElementById('judgeProvider').value;
   const apiKey = document.getElementById('judgeApiKey').value;
   const judgeModel = document.getElementById('judgeModel').value;
+  const baseUrl = document.getElementById('judgeBaseUrl').value;
+  const apiFormat = document.getElementById('judgeApiFormat').value;
+  const enabled = document.getElementById('judgeEnabled').value === 'true';
   document.getElementById('settingsStatus').textContent = '保存中…';
   try {
     const r = await fetch(`${API}/api/settings/judge`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        provider,
         api_key: apiKey,
+        model: judgeModel,
         judge_model: judgeModel,
+        base_url: baseUrl,
+        api_format: apiFormat,
+        enabled,
       }),
     });
     const d = await r.json();
