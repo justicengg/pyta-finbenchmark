@@ -6,11 +6,14 @@ Returns price direction for a given ticker on a target date.
 from __future__ import annotations
 
 import logging
+import queue
+import threading
 from datetime import date, timedelta
 
 logger = logging.getLogger(__name__)
 
 FLAT_THRESHOLD = 0.005  # ±0.5% counts as flat
+FETCH_TIMEOUT_SECONDS = 8.0
 
 
 def get_price_direction(
@@ -32,12 +35,9 @@ def get_price_direction(
         }
     """
     for fetch_fn in (_fetch_akshare, _fetch_yfinance):
-        try:
-            result = fetch_fn(ticker, market, target_date)
-            if result:
-                return result
-        except Exception as exc:
-            logger.warning("Price fetch failed (%s): %s", fetch_fn.__name__, exc)
+        result = _run_fetch_with_timeout(fetch_fn, ticker, market, target_date)
+        if result:
+            return result
     return None
 
 
@@ -48,12 +48,9 @@ def cross_verify(ticker: str, market: str, target_date: date) -> dict | None:
     """
     results = []
     for fetch_fn in (_fetch_akshare, _fetch_yfinance):
-        try:
-            r = fetch_fn(ticker, market, target_date)
-            if r:
-                results.append(r)
-        except Exception as exc:
-            logger.warning("Cross-verify fetch failed (%s): %s", fetch_fn.__name__, exc)
+        result = _run_fetch_with_timeout(fetch_fn, ticker, market, target_date)
+        if result:
+            results.append(result)
 
     if not results:
         return None
@@ -70,6 +67,41 @@ def cross_verify(ticker: str, market: str, target_date: date) -> dict | None:
 
     primary["needs_review"] = needs_review
     return primary
+
+
+def _run_fetch_with_timeout(fetch_fn, ticker: str, market: str, target_date: date) -> dict | None:
+    result_queue: queue.Queue[tuple[str, dict | None] | tuple[str, BaseException]] = queue.Queue(maxsize=1)
+
+    def _worker() -> None:
+        try:
+            result_queue.put(("result", fetch_fn(ticker, market, target_date)))
+        except BaseException as exc:  # pragma: no cover - defensive path
+            result_queue.put(("error", exc))
+
+    thread = threading.Thread(
+        target=_worker,
+        name=f"price-fetch-{fetch_fn.__name__}",
+        daemon=True,
+    )
+    thread.start()
+
+    try:
+        kind, payload = result_queue.get(timeout=FETCH_TIMEOUT_SECONDS)
+    except queue.Empty:
+        logger.warning(
+            "Price fetch timeout (%s) for %s %s on %s",
+            fetch_fn.__name__,
+            ticker,
+            market,
+            target_date,
+        )
+        return None
+
+    if kind == "error":
+        logger.warning("Price fetch failed (%s): %s", fetch_fn.__name__, payload)
+        return None
+
+    return payload
 
 
 # ── AKShare ────────────────────────────────────────────────────────────────────
