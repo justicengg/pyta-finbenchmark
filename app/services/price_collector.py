@@ -193,7 +193,8 @@ def _to_yfinance_ticker(ticker: str, market: str) -> str:
         code = ticker.replace(".HK", "").zfill(4)
         return f"{code}.HK"
     if market in ("A", "CN"):
-        if ticker.startswith("6"):
-            return f"{ticker}.SS"
-        return f"{ticker}.SZ"
+        code = ticker.split(".")[0]
+        if code.startswith("6"):
+            return f"{code}.SS"
+        return f"{code}.SZ"
     return ticker

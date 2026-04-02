@@ -49,3 +49,8 @@ def test_cross_verify_returns_first_available_result_when_other_source_times_out
         price_collector.FETCH_TIMEOUT_SECONDS = original_timeout
         price_collector._fetch_akshare = original_akshare
         price_collector._fetch_yfinance = original_yfinance
+
+
+def test_to_yfinance_ticker_normalizes_a_share_suffix():
+    assert price_collector._to_yfinance_ticker("601398.SH", "A") == "601398.SS"
+    assert price_collector._to_yfinance_ticker("000001.SZ", "A") == "000001.SZ"
