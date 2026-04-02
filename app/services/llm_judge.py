@@ -8,31 +8,24 @@ from __future__ import annotations
 import json
 import logging
 
-import anthropic
-
-from app.config import settings
-from app.services.runtime_settings import get_judge_runtime_config_without_session
+from app.services.judge_client_factory import (
+    JudgeClientUnavailable,
+    create_judge_client,
+)
+from app.services.judge_runtime import JudgeRuntimeConfig, load_judge_runtime_config
 
 logger = logging.getLogger(__name__)
-
-_client: anthropic.Anthropic | None = None
-_client_api_key: str | None = None
 
 
 class LLMJudgeUnavailable(RuntimeError):
     """Raised when the judge cannot run due to local configuration."""
 
 
-def _get_client() -> anthropic.Anthropic:
-    global _client, _client_api_key
-    config = get_judge_runtime_config_without_session()
-    api_key = str(config["api_key"] or "")
-    if not api_key:
-        raise LLMJudgeUnavailable("ANTHROPIC_API_KEY is not configured")
-    if _client is None or _client_api_key != api_key:
-        _client = anthropic.Anthropic(api_key=api_key)
-        _client_api_key = api_key
-    return _client
+def _get_client(config: JudgeRuntimeConfig):
+    try:
+        return create_judge_client(config)
+    except JudgeClientUnavailable as exc:
+        raise LLMJudgeUnavailable(str(exc)) from exc
 
 
 SYSTEM_PROMPT = """你是一位资深市场分析师，负责评估 AI 沙盘推演系统中各参与者 Agent 的推演质量。
@@ -102,16 +95,16 @@ def score_reasoning(
         observations="; ".join(agent_snapshot.get("observations", [])),
     )
 
-    runtime_config = get_judge_runtime_config_without_session()
-    client = _get_client()
-    message = client.messages.create(
-        model=str(runtime_config["judge_model"] or settings.judge_model),
+    runtime_config = load_judge_runtime_config()
+    client = _get_client(runtime_config)
+    completion = client.complete(
+        system_prompt=SYSTEM_PROMPT,
+        user_prompt=prompt,
+        model=str(runtime_config.model),
         max_tokens=512,
-        system=SYSTEM_PROMPT,
-        messages=[{"role": "user", "content": prompt}],
     )
 
-    raw = message.content[0].text.strip()
+    raw = completion.text.strip()
     try:
         result = json.loads(raw)
     except json.JSONDecodeError:
@@ -124,5 +117,5 @@ def score_reasoning(
     )
     result["total"] = total
     result["score"] = round(total / 100, 4)
-    result["model"] = str(runtime_config["judge_model"] or settings.judge_model)
+    result["model"] = completion.model
     return result
