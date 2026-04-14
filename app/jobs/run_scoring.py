@@ -18,7 +18,7 @@ def run() -> None:
     try:
         # Find complete cases not yet scored (no scores exist)
         from app.models import EvalScore
-        from sqlalchemy import not_, exists
+        from sqlalchemy import exists
 
         cases = (
             db.query(EvalCase)

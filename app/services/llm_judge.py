@@ -113,7 +113,12 @@ def score_reasoning(
 
     total = result.get("total") or sum(
         result.get(k, 0)
-        for k in ("logical_coherence", "evidence_grounding", "specificity", "consistency")
+        for k in (
+            "logical_coherence",
+            "evidence_grounding",
+            "specificity",
+            "consistency",
+        )
     )
     result["total"] = total
     result["score"] = round(total / 100, 4)

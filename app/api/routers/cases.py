@@ -16,6 +16,7 @@ router = APIRouter(prefix="/cases", tags=["cases"])
 
 class BootstrapCaseRequest(BaseModel):
     """Manually create a historical (bootstrap) eval case."""
+
     run_id: str
     ticker: str
     market: str
@@ -27,6 +28,7 @@ class BootstrapCaseRequest(BaseModel):
 
 class SnapshotUpdateRequest(BaseModel):
     """Patch payload for bootstrap replay snapshot backfill."""
+
     agent_snapshots: list[dict]
     resolution_snapshot: dict | None = None
 
@@ -84,7 +86,9 @@ def get_case(case_id: str, db: Session = Depends(get_db)):
 
 
 @router.patch("/{case_id}/snapshots")
-def update_snapshots(case_id: str, body: SnapshotUpdateRequest, db: Session = Depends(get_db)):
+def update_snapshots(
+    case_id: str, body: SnapshotUpdateRequest, db: Session = Depends(get_db)
+):
     case = db.query(EvalCase).filter(EvalCase.id == case_id).first()
     if not case:
         raise HTTPException(status_code=404, detail="Case not found")
@@ -116,9 +120,11 @@ def _serialize(case: EvalCase, detail: bool = False) -> dict:
         "created_at": case.created_at.isoformat(),
     }
     if detail:
-        data.update({
-            "input_narrative": case.input_narrative,
-            "agent_snapshots": case.agent_snapshots or [],
-            "resolution_snapshot": case.resolution_snapshot,
-        })
+        data.update(
+            {
+                "input_narrative": case.input_narrative,
+                "agent_snapshots": case.agent_snapshots or [],
+                "resolution_snapshot": case.resolution_snapshot,
+            }
+        )
     return data

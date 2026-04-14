@@ -36,8 +36,10 @@ def get_gradient_curve(
     """
     from app.models import EvalCase
 
-    q = db.query(EvalScore).join(EvalCase, EvalScore.case_id == EvalCase.id).filter(
-        EvalScore.dimension == "direction_accuracy"
+    q = (
+        db.query(EvalScore)
+        .join(EvalCase, EvalScore.case_id == EvalCase.id)
+        .filter(EvalScore.dimension == "direction_accuracy")
     )
     if ticker:
         q = q.filter(EvalCase.ticker == ticker)
@@ -45,7 +47,9 @@ def get_gradient_curve(
         q = q.filter(EvalCase.market == market)
 
     rows = (
-        q.with_entities(EvalScore.horizon_days, func.avg(EvalScore.score).label("avg_score"))
+        q.with_entities(
+            EvalScore.horizon_days, func.avg(EvalScore.score).label("avg_score")
+        )
         .group_by(EvalScore.horizon_days)
         .all()
     )
@@ -63,7 +67,12 @@ def get_summary(db: Session = Depends(get_db)):
     """
     Aggregate summary across all scored cases — for dashboard overview.
     """
-    dims = ["direction_accuracy", "reasoning_quality", "resolution_accuracy", "event_alignment"]
+    dims = [
+        "direction_accuracy",
+        "reasoning_quality",
+        "resolution_accuracy",
+        "event_alignment",
+    ]
     result = {}
     for dim in dims:
         row = (

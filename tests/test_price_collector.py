@@ -12,7 +12,9 @@ def test_run_fetch_with_timeout_returns_none_for_slow_source():
     original_timeout = price_collector.FETCH_TIMEOUT_SECONDS
     try:
         price_collector.FETCH_TIMEOUT_SECONDS = 0.05
-        result = price_collector._run_fetch_with_timeout(slow_fetch, "688256.SH", "A", date(2026, 1, 16))
+        result = price_collector._run_fetch_with_timeout(
+            slow_fetch, "688256.SH", "A", date(2026, 1, 16)
+        )
         assert result is None
     finally:
         price_collector.FETCH_TIMEOUT_SECONDS = original_timeout

@@ -6,7 +6,7 @@ For each case, check which T+N horizons have passed and fetch price data.
 from __future__ import annotations
 
 import logging
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 
 from app.db import SessionLocal
 from app.models import EvalCase, GroundTruth
@@ -20,7 +20,11 @@ HORIZONS = [1, 2, 3, 5, 10, 30, 60]
 def run() -> None:
     db = SessionLocal()
     try:
-        cases = db.query(EvalCase).filter(EvalCase.status.in_(["pending", "collecting"])).all()
+        cases = (
+            db.query(EvalCase)
+            .filter(EvalCase.status.in_(["pending", "collecting"]))
+            .all()
+        )
         logger.info("collect_gt: processing %d cases", len(cases))
 
         for case in cases:
@@ -55,7 +59,9 @@ def _process_case(case: EvalCase, db) -> None:
 
         result = cross_verify(case.ticker, case.market, target_date)
         if result is None:
-            logger.warning("No price data for %s on %s (T+%d)", case.ticker, target_date, horizon)
+            logger.warning(
+                "No price data for %s on %s (T+%d)", case.ticker, target_date, horizon
+            )
             continue
 
         gt = GroundTruth(
@@ -71,7 +77,9 @@ def _process_case(case: EvalCase, db) -> None:
 
     if newly_collected:
         db.commit()
-        logger.info("case %s: collected %d new ground truth records", case.id, newly_collected)
+        logger.info(
+            "case %s: collected %d new ground truth records", case.id, newly_collected
+        )
 
     # Update case status
     all_collected = _all_horizons_collected(case, db)
@@ -87,7 +95,9 @@ def _process_case(case: EvalCase, db) -> None:
 def _all_horizons_collected(case: EvalCase, db) -> bool:
     run_date = case.run_timestamp.date()
     today = date.today()
-    due_horizons = [h for h in HORIZONS if _next_trading_day(run_date + timedelta(days=h)) <= today]
+    due_horizons = [
+        h for h in HORIZONS if _next_trading_day(run_date + timedelta(days=h)) <= today
+    ]
     if not due_horizons:
         return False
 

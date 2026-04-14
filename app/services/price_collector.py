@@ -63,14 +63,23 @@ def cross_verify(ticker: str, market: str, target_date: date) -> dict | None:
         spread = max(changes) - min(changes)
         if spread > 0.3:
             needs_review = True
-            logger.info("Price source disagreement for %s on %s: spread=%.3f%%", ticker, target_date, spread)
+            logger.info(
+                "Price source disagreement for %s on %s: spread=%.3f%%",
+                ticker,
+                target_date,
+                spread,
+            )
 
     primary["needs_review"] = needs_review
     return primary
 
 
-def _run_fetch_with_timeout(fetch_fn, ticker: str, market: str, target_date: date) -> dict | None:
-    result_queue: queue.Queue[tuple[str, dict | None] | tuple[str, BaseException]] = queue.Queue(maxsize=1)
+def _run_fetch_with_timeout(
+    fetch_fn, ticker: str, market: str, target_date: date
+) -> dict | None:
+    result_queue: queue.Queue[tuple[str, dict | None] | tuple[str, BaseException]] = (
+        queue.Queue(maxsize=1)
+    )
 
     def _worker() -> None:
         try:
@@ -110,6 +119,7 @@ def _fetch_chain():
 
 
 # ── AKShare ────────────────────────────────────────────────────────────────────
+
 
 def _fetch_akshare(ticker: str, market: str, target_date: date) -> dict | None:
     import akshare as ak  # type: ignore
@@ -157,6 +167,7 @@ def _fetch_akshare(ticker: str, market: str, target_date: date) -> dict | None:
 
 # ── yfinance ───────────────────────────────────────────────────────────────────
 
+
 def _fetch_yfinance(ticker: str, market: str, target_date: date) -> dict | None:
     import yfinance as yf  # type: ignore
     import pandas as pd  # type: ignore
@@ -192,6 +203,7 @@ def _fetch_yfinance(ticker: str, market: str, target_date: date) -> dict | None:
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
+
 
 def _to_direction(change_pct: float) -> str:
     if change_pct > FLAT_THRESHOLD * 100:

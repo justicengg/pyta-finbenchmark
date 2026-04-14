@@ -35,8 +35,12 @@ def test_judge_runtime_config_reads_db_provider_settings(monkeypatch):
     session.add(AppSetting(setting_key="judge.provider", setting_value="openrouter"))
     session.add(AppSetting(setting_key="judge.api_key", setting_value="db-key"))
     session.add(AppSetting(setting_key="judge.model", setting_value="db-model"))
-    session.add(AppSetting(setting_key="judge.base_url", setting_value="https://example.com/v1"))
-    session.add(AppSetting(setting_key="judge.api_format", setting_value="openai_compatible"))
+    session.add(
+        AppSetting(setting_key="judge.base_url", setting_value="https://example.com/v1")
+    )
+    session.add(
+        AppSetting(setting_key="judge.api_format", setting_value="openai_compatible")
+    )
     session.commit()
 
     monkeypatch.setenv("JUDGE_PROVIDER", "anthropic")
@@ -64,7 +68,9 @@ def test_create_judge_client_prefers_anthropic_native(monkeypatch):
     class FakeMessages:
         def create(self, **kwargs):
             captured["kwargs"] = kwargs
-            return SimpleNamespace(content=[FakeMessageBlock('{"total": 88, "rationale": "ok"}')])
+            return SimpleNamespace(
+                content=[FakeMessageBlock('{"total": 88, "rationale": "ok"}')]
+            )
 
     class FakeAnthropic:
         def __init__(self, **kwargs):
@@ -107,7 +113,11 @@ def test_create_judge_client_prefers_openrouter_openai_compatible(monkeypatch):
             return {
                 "model": "openrouter-model",
                 "choices": [
-                    {"message": {"content": '{"total": 92, "rationale": "openrouter ok"}'}}
+                    {
+                        "message": {
+                            "content": '{"total": 92, "rationale": "openrouter ok"}'
+                        }
+                    }
                 ],
             }
 

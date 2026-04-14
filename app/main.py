@@ -64,4 +64,8 @@ def dashboard():
 
 
 if DASHBOARD_DIR.exists():
-    app.mount("/dashboard/assets", StaticFiles(directory=DASHBOARD_DIR), name="dashboard-assets")
+    app.mount(
+        "/dashboard/assets",
+        StaticFiles(directory=DASHBOARD_DIR),
+        name="dashboard-assets",
+    )

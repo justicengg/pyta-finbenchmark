@@ -13,6 +13,7 @@ Bootstrap case loader — 从 Codex 确认的 25 个种子用例创建 EvalCase 
 
 import sys
 import os
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 import uuid
@@ -300,11 +301,15 @@ def load(dry_run: bool = False, skip_unverified: bool = False) -> None:
             run_id = f"bootstrap-{case_def['ticker']}-{case_def['key_date']}"
             existing = db.query(EvalCase).filter(EvalCase.run_id == run_id).first()
             if existing:
-                print(f"  [EXISTS] #{no:02d} {case_def['ticker']} {case_def['key_date']}")
+                print(
+                    f"  [EXISTS] #{no:02d} {case_def['ticker']} {case_def['key_date']}"
+                )
                 skipped += 1
                 continue
 
-            key_date = datetime.strptime(case_def["key_date"], "%Y-%m-%d").replace(tzinfo=timezone.utc)
+            key_date = datetime.strptime(case_def["key_date"], "%Y-%m-%d").replace(
+                tzinfo=timezone.utc
+            )
 
             if not dry_run:
                 record = EvalCase(
@@ -321,7 +326,9 @@ def load(dry_run: bool = False, skip_unverified: bool = False) -> None:
                 )
                 db.add(record)
 
-            print(f"  [{'DRY' if dry_run else 'OK'}] #{no:02d} {case_def['ticker']} {case_def['key_date']} — {case_def['scene']}")
+            print(
+                f"  [{'DRY' if dry_run else 'OK'}] #{no:02d} {case_def['ticker']} {case_def['key_date']} — {case_def['scene']}"
+            )
             created += 1
 
         if not dry_run:
@@ -337,9 +344,12 @@ def load(dry_run: bool = False, skip_unverified: bool = False) -> None:
 
 if __name__ == "__main__":
     import argparse
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--dry-run", action="store_true", help="只打印，不写库")
-    parser.add_argument("--skip-unverified", action="store_true", help="跳过 #20-25 需核验用例")
+    parser.add_argument(
+        "--skip-unverified", action="store_true", help="跳过 #20-25 需核验用例"
+    )
     args = parser.parse_args()
 
     print(f"Bootstrap 用例加载 {'(dry run)' if args.dry_run else ''}\n")

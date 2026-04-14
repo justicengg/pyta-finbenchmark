@@ -108,7 +108,11 @@ def test_legacy_database_key_is_still_supported():
 
     db = SessionLocal()
     try:
-        db.add(AppSetting(setting_key="judge.anthropic_api_key", setting_value="legacy-db-key"))
+        db.add(
+            AppSetting(
+                setting_key="judge.anthropic_api_key", setting_value="legacy-db-key"
+            )
+        )
         db.add(AppSetting(setting_key="judge.model", setting_value="claude-sonnet-db"))
         db.commit()
     finally:
