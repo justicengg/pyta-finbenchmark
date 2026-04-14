@@ -42,11 +42,16 @@ def receive_sandbox_run(
     x_webhook_secret: str = Header(default=""),
     db: Session = Depends(get_db),
 ):
-    if settings.main_backend_webhook_secret and x_webhook_secret != settings.main_backend_webhook_secret:
+    if (
+        settings.main_backend_webhook_secret
+        and x_webhook_secret != settings.main_backend_webhook_secret
+    ):
         raise HTTPException(status_code=401, detail="Invalid webhook secret")
 
     if payload.event != "sandbox_run_completed":
-        raise HTTPException(status_code=400, detail=f"Unknown event type: {payload.event}")
+        raise HTTPException(
+            status_code=400, detail=f"Unknown event type: {payload.event}"
+        )
 
     # Idempotency: skip if run_id already exists
     existing = db.query(EvalCase).filter(EvalCase.run_id == payload.run_id).first()

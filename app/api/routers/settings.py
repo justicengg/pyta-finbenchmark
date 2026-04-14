@@ -20,7 +20,9 @@ from app.services.runtime_settings import (
 
 router = APIRouter(prefix="/settings", tags=["settings"])
 
-JudgeProvider = Literal["anthropic", "openai", "openrouter", "minimax", "moonshot", "zai", "custom"]
+JudgeProvider = Literal[
+    "anthropic", "openai", "openrouter", "minimax", "moonshot", "zai", "custom"
+]
 JudgeApiFormat = Literal["anthropic", "openai_compatible", "custom"]
 
 
@@ -54,7 +56,9 @@ def get_judge_settings(db: Session = Depends(get_db)):
 
 
 @router.put("/judge")
-def update_judge_settings(body: JudgeSettingsUpdateRequest, db: Session = Depends(get_db)):
+def update_judge_settings(
+    body: JudgeSettingsUpdateRequest, db: Session = Depends(get_db)
+):
     current = get_judge_runtime_config(db)
     provider = body.provider or str(current["provider"])
     model = body.model if body.model is not None else body.judge_model

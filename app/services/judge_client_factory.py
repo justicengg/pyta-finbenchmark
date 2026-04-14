@@ -148,7 +148,9 @@ def create_judge_client(config: JudgeRuntimeConfig) -> JudgeClient:
     provider = config.provider.strip().lower()
     api_format = config.api_format.strip().lower()
     if api_format == "anthropic" and provider == "anthropic":
-        return AnthropicJudgeClient(api_key=config.api_key, base_url=config.base_url or None)
+        return AnthropicJudgeClient(
+            api_key=config.api_key, base_url=config.base_url or None
+        )
 
     base_url = config.base_url or _default_openai_base_url(provider)
     if not base_url:

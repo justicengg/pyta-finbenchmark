@@ -10,7 +10,9 @@ from app.db import Base
 class EvalScore(Base):
     __tablename__ = "eval_scores"
 
-    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
     case_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
     agent_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     # direction_accuracy | reasoning_quality | resolution_accuracy | event_alignment

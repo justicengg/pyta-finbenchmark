@@ -20,8 +20,12 @@ from typing import Any
 
 import httpx
 
-EVAL_SERVICE_URL = os.environ.get("EVAL_SERVICE_URL", "http://127.0.0.1:8001").rstrip("/")
-MAIN_BACKEND_URL = os.environ.get("MAIN_BACKEND_URL", "http://127.0.0.1:8000").rstrip("/")
+EVAL_SERVICE_URL = os.environ.get("EVAL_SERVICE_URL", "http://127.0.0.1:8001").rstrip(
+    "/"
+)
+MAIN_BACKEND_URL = os.environ.get("MAIN_BACKEND_URL", "http://127.0.0.1:8000").rstrip(
+    "/"
+)
 MAIN_BACKEND_API_KEY = os.environ.get("MAIN_BACKEND_API_KEY", "")
 
 
@@ -71,16 +75,24 @@ def extract_agent_snapshots(result: dict[str, Any]) -> list[dict[str, Any]]:
     for agent_id, perspective in perspective_detail.items():
         action = action_detail.get(agent_id) or {}
         market_bias = perspective.get("market_bias", "neutral")
-        bias = market_bias if market_bias in {"bullish", "bearish", "neutral"} else "neutral"
-        snapshots.append({
-            "agent_id": agent_id,
-            "bias": bias,
-            "action_summary": action.get("rationale_summary", ""),
-            "key_drivers": action.get("key_drivers", []),
-            "observations": perspective.get("key_observations", []),
-            "confidence": perspective.get("confidence", action.get("confidence", 0.0)),
-            "action_horizon": action.get("horizon", ""),
-        })
+        bias = (
+            market_bias
+            if market_bias in {"bullish", "bearish", "neutral"}
+            else "neutral"
+        )
+        snapshots.append(
+            {
+                "agent_id": agent_id,
+                "bias": bias,
+                "action_summary": action.get("rationale_summary", ""),
+                "key_drivers": action.get("key_drivers", []),
+                "observations": perspective.get("key_observations", []),
+                "confidence": perspective.get(
+                    "confidence", action.get("confidence", 0.0)
+                ),
+                "action_horizon": action.get("horizon", ""),
+            }
+        )
     return snapshots
 
 
@@ -101,12 +113,16 @@ def patch_case_snapshots(
 
 
 def replay_cases(cases: Iterable[dict[str, Any]], dry_run: bool = False) -> None:
-    backend_headers = {"X-API-Key": MAIN_BACKEND_API_KEY} if MAIN_BACKEND_API_KEY else {}
+    backend_headers = (
+        {"X-API-Key": MAIN_BACKEND_API_KEY} if MAIN_BACKEND_API_KEY else {}
+    )
 
     with build_client() as client:
         for case in cases:
             if case.get("agent_count", 0) > 0:
-                print(f"[skip] {case['run_id']} already has {case['agent_count']} agent snapshots")
+                print(
+                    f"[skip] {case['run_id']} already has {case['agent_count']} agent snapshots"
+                )
                 continue
 
             payload = build_sandbox_payload(case)
@@ -136,9 +152,17 @@ def replay_cases(cases: Iterable[dict[str, Any]], dry_run: bool = False) -> None
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Replay bootstrap eval cases through the main sandbox backend.")
-    parser.add_argument("--limit", type=int, default=25, help="Number of bootstrap cases to fetch")
-    parser.add_argument("--dry-run", action="store_true", help="Print planned runs without calling backend or patching")
+    parser = argparse.ArgumentParser(
+        description="Replay bootstrap eval cases through the main sandbox backend."
+    )
+    parser.add_argument(
+        "--limit", type=int, default=25, help="Number of bootstrap cases to fetch"
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Print planned runs without calling backend or patching",
+    )
     return parser.parse_args()
 
 

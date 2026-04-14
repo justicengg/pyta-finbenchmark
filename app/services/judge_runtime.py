@@ -29,7 +29,9 @@ def _normalize_config(raw: dict[str, str | bool]) -> JudgeRuntimeConfig:
     provider = str(raw.get("provider") or DEFAULT_PROVIDER).strip().lower()
     api_format = str(raw.get("api_format") or "").strip().lower().replace("-", "_")
     if not api_format:
-        api_format = DEFAULT_API_FORMAT if provider == "anthropic" else "openai_compatible"
+        api_format = (
+            DEFAULT_API_FORMAT if provider == "anthropic" else "openai_compatible"
+        )
 
     return JudgeRuntimeConfig(
         provider=provider or DEFAULT_PROVIDER,

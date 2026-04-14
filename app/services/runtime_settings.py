@@ -8,7 +8,9 @@ from app.config import settings
 from app.db import SessionLocal
 from app.models import AppSetting
 
-JudgeProvider = Literal["anthropic", "openai", "openrouter", "minimax", "moonshot", "zai", "custom"]
+JudgeProvider = Literal[
+    "anthropic", "openai", "openrouter", "minimax", "moonshot", "zai", "custom"
+]
 JudgeApiFormat = Literal["anthropic", "openai_compatible", "custom"]
 
 JUDGE_PROVIDER_KEY = "judge.provider"
@@ -67,7 +69,9 @@ def get_judge_runtime_config(session: Session) -> dict[str, str | bool]:
     effective_base_url = stored_base_url or ""
     effective_api_format = stored_api_format or _default_api_format(effective_provider)
     parsed_enabled = _parse_bool(stored_enabled)
-    effective_enabled = parsed_enabled if parsed_enabled is not None else bool(effective_key)
+    effective_enabled = (
+        parsed_enabled if parsed_enabled is not None else bool(effective_key)
+    )
     configured_via_settings = any(
         value not in (None, "")
         for value in (

@@ -39,9 +39,7 @@ def score_case(case: EvalCase, db: Session) -> None:
     Compute and persist all available scores for a case.
     Called after ground truth is collected.
     """
-    ground_truths = (
-        db.query(GroundTruth).filter(GroundTruth.case_id == case.id).all()
-    )
+    ground_truths = db.query(GroundTruth).filter(GroundTruth.case_id == case.id).all()
 
     price_gts = {
         gt.horizon_days: gt
@@ -57,6 +55,7 @@ def score_case(case: EvalCase, db: Session) -> None:
 
 # ── Direction Accuracy ─────────────────────────────────────────────────────────
 
+
 def _score_direction_accuracy(
     case: EvalCase,
     price_gts: dict[int, GroundTruth],
@@ -70,25 +69,29 @@ def _score_direction_accuracy(
 
         for horizon_days, gt in price_gts.items():
             actual_direction = gt.value.get("direction", "")
-            score = _direction_score(predicted_direction, actual_direction, gt.value.get("change_pct", 0))
+            score = _direction_score(
+                predicted_direction, actual_direction, gt.value.get("change_pct", 0)
+            )
             weight = GRADIENT_WEIGHTS.get(horizon_days, 1.0)
 
-            db.add(EvalScore(
-                case_id=case.id,
-                agent_id=agent_id,
-                dimension="direction_accuracy",
-                horizon_days=horizon_days,
-                score=score,
-                weighted_score=round(score * weight, 4),
-                scorer_type="auto",
-                score_details={
-                    "predicted": predicted_direction,
-                    "actual": actual_direction,
-                    "change_pct": gt.value.get("change_pct"),
-                    "gradient_weight": weight,
-                },
-                scored_at=datetime.utcnow(),
-            ))
+            db.add(
+                EvalScore(
+                    case_id=case.id,
+                    agent_id=agent_id,
+                    dimension="direction_accuracy",
+                    horizon_days=horizon_days,
+                    score=score,
+                    weighted_score=round(score * weight, 4),
+                    scorer_type="auto",
+                    score_details={
+                        "predicted": predicted_direction,
+                        "actual": actual_direction,
+                        "change_pct": gt.value.get("change_pct"),
+                        "gradient_weight": weight,
+                    },
+                    scored_at=datetime.utcnow(),
+                )
+            )
 
     db.commit()
 
@@ -103,6 +106,7 @@ def _direction_score(predicted: str, actual: str, change_pct: float) -> float:
 
 
 # ── Resolution Accuracy ────────────────────────────────────────────────────────
+
 
 def _score_resolution_accuracy(
     case: EvalCase,
@@ -122,29 +126,34 @@ def _score_resolution_accuracy(
         if not gt:
             continue
         actual_direction = gt.value.get("direction", "")
-        score = _direction_score(predicted_direction, actual_direction, gt.value.get("change_pct", 0))
+        score = _direction_score(
+            predicted_direction, actual_direction, gt.value.get("change_pct", 0)
+        )
 
-        db.add(EvalScore(
-            case_id=case.id,
-            agent_id=None,
-            dimension="resolution_accuracy",
-            horizon_days=horizon_days,
-            score=score,
-            weighted_score=None,
-            scorer_type="auto",
-            score_details={
-                "net_bias": net_bias,
-                "predicted": predicted_direction,
-                "actual": actual_direction,
-                "regime": resolution.get("marketForceSummary", {}).get("regime"),
-            },
-            scored_at=datetime.utcnow(),
-        ))
+        db.add(
+            EvalScore(
+                case_id=case.id,
+                agent_id=None,
+                dimension="resolution_accuracy",
+                horizon_days=horizon_days,
+                score=score,
+                weighted_score=None,
+                scorer_type="auto",
+                score_details={
+                    "net_bias": net_bias,
+                    "predicted": predicted_direction,
+                    "actual": actual_direction,
+                    "regime": resolution.get("marketForceSummary", {}).get("regime"),
+                },
+                scored_at=datetime.utcnow(),
+            )
+        )
 
     db.commit()
 
 
 # ── Reasoning Quality ──────────────────────────────────────────────────────────
+
 
 def _score_reasoning_quality(case: EvalCase, db: Session) -> None:
     global _reasoning_judge_unavailable_logged
@@ -159,30 +168,35 @@ def _score_reasoning_quality(case: EvalCase, db: Session) -> None:
                 input_narrative=case.input_narrative,
                 agent_snapshot=agent,
             )
-            db.add(EvalScore(
-                case_id=case.id,
-                agent_id=agent_id,
-                dimension="reasoning_quality",
-                horizon_days=None,
-                score=result["score"],
-                weighted_score=None,
-                scorer_type="llm_judge",
-                scorer_model=result.get("model"),
-                score_details=result,
-                scored_at=datetime.utcnow(),
-            ))
+            db.add(
+                EvalScore(
+                    case_id=case.id,
+                    agent_id=agent_id,
+                    dimension="reasoning_quality",
+                    horizon_days=None,
+                    score=result["score"],
+                    weighted_score=None,
+                    scorer_type="llm_judge",
+                    scorer_model=result.get("model"),
+                    score_details=result,
+                    scored_at=datetime.utcnow(),
+                )
+            )
         except llm_judge.LLMJudgeUnavailable as exc:
             if not _reasoning_judge_unavailable_logged:
                 logger.warning("Skipping reasoning_quality scoring: %s", exc)
                 _reasoning_judge_unavailable_logged = True
             break
         except Exception as exc:
-            logger.error("LLM judge failed for agent %s in case %s: %s", agent_id, case.id, exc)
+            logger.error(
+                "LLM judge failed for agent %s in case %s: %s", agent_id, case.id, exc
+            )
 
     db.commit()
 
 
 # ── Event Alignment ────────────────────────────────────────────────────────────
+
 
 def _score_event_alignment(
     case: EvalCase,
@@ -194,23 +208,26 @@ def _score_event_alignment(
         return
 
     correct = sum(
-        1 for gt in event_gts
+        1
+        for gt in event_gts
         if gt.value.get("predicted_direction") == gt.value.get("actual_direction")
     )
     score = correct / len(event_gts)
 
-    db.add(EvalScore(
-        case_id=case.id,
-        agent_id=None,
-        dimension="event_alignment",
-        horizon_days=None,
-        score=round(score, 4),
-        weighted_score=None,
-        scorer_type="auto",
-        score_details={
-            "total_events": len(event_gts),
-            "correct": correct,
-        },
-        scored_at=datetime.utcnow(),
-    ))
+    db.add(
+        EvalScore(
+            case_id=case.id,
+            agent_id=None,
+            dimension="event_alignment",
+            horizon_days=None,
+            score=round(score, 4),
+            weighted_score=None,
+            scorer_type="auto",
+            score_details={
+                "total_events": len(event_gts),
+                "correct": correct,
+            },
+            scored_at=datetime.utcnow(),
+        )
+    )
     db.commit()

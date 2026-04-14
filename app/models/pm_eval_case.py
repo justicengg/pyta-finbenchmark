@@ -10,8 +10,12 @@ from app.db import Base
 class PmEvalCase(Base):
     __tablename__ = "pm_eval_cases"
 
-    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    sandbox_id: Mapped[str] = mapped_column(String(128), unique=True, nullable=False, index=True)
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    sandbox_id: Mapped[str] = mapped_column(
+        String(128), unique=True, nullable=False, index=True
+    )
     company_name: Mapped[str] = mapped_column(String(256), nullable=False, index=True)
     sector: Mapped[str | None] = mapped_column(String(128), nullable=True)
     run_timestamp: Mapped[datetime] = mapped_column(DateTime, nullable=False)

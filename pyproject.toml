@@ -24,10 +24,14 @@ python-dateutil = "^2.9.0"
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.4"
 pytest-asyncio = "^0.23.0"
+ruff = "^0.15.10"
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests"]
+markers = [
+    "llm: tests that require LLM API calls (skipped in PR CI)",
+]
 
 [build-system]
 requires = ["poetry-core>=1.9.0"]
