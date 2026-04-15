@@ -75,9 +75,10 @@ PM_JUDGE_PROMPT_TEMPLATE = """请评估以下一级市场投资推演报告的�
 
 报告内容摘要：
 - 关键假设：{key_assumptions}
-- 维度分析：{dimension_scores}
+- 不确定性评估（维度分析）：{uncertainty_map}
 - 风险分岔：{path_forks}
-- 财务分析：{financial_analysis}
+- 财务透镜：{financial_lens}
+- 估值分析：{valuation_analysis}
 - 监测指标：{monitoring_triggers}
 
 请对以下 4 个维度各打 0–25 分：
@@ -120,11 +121,12 @@ def score_pm_reasoning(
             "model": str,
         }
     """
-    # Extract key sections from report_snapshot
-    key_assumptions = report_snapshot.get("key_assumptions", [])
-    dimension_scores = report_snapshot.get("dimension_scores", {})
+    # Extract key sections from report_snapshot (matches webhook payload shape)
+    key_assumptions = report_snapshot.get("key_assumptions", {})
+    uncertainty_map = report_snapshot.get("uncertainty_map", {})
     path_forks = report_snapshot.get("path_forks", [])
-    financial_analysis = report_snapshot.get("financial_analysis", {})
+    financial_lens = report_snapshot.get("financial_lens", {})
+    valuation_analysis = report_snapshot.get("valuation_analysis", {})
     monitoring_triggers = report_snapshot.get("monitoring_triggers", [])
 
     prompt = PM_JUDGE_PROMPT_TEMPLATE.format(
@@ -133,9 +135,10 @@ def score_pm_reasoning(
         decision=decision,
         confidence=confidence,
         key_assumptions=json.dumps(key_assumptions, ensure_ascii=False)[:1200],
-        dimension_scores=json.dumps(dimension_scores, ensure_ascii=False)[:800],
+        uncertainty_map=json.dumps(uncertainty_map, ensure_ascii=False)[:800],
         path_forks=json.dumps(path_forks, ensure_ascii=False)[:800],
-        financial_analysis=json.dumps(financial_analysis, ensure_ascii=False)[:800],
+        financial_lens=json.dumps(financial_lens, ensure_ascii=False)[:800],
+        valuation_analysis=json.dumps(valuation_analysis, ensure_ascii=False)[:600],
         monitoring_triggers=json.dumps(monitoring_triggers, ensure_ascii=False)[:400],
     )
 
@@ -155,15 +158,16 @@ def score_pm_reasoning(
         logger.warning("PM LLM judge returned non-JSON: %s", raw[:200])
         raise ValueError(f"PM LLM judge returned non-JSON output: {raw[:200]}")
 
-    total = result.get("total") or sum(
-        result.get(k, 0)
-        for k in (
-            "assumption_quality",
-            "dimension_coverage",
-            "financial_depth",
-            "risk_identification",
-        )
+    sub_keys = (
+        "assumption_quality",
+        "dimension_coverage",
+        "financial_depth",
+        "risk_identification",
     )
+    for k in sub_keys:
+        result[k] = int(result.get(k, 0))
+    total = result.get("total")
+    total = int(total) if total else sum(result[k] for k in sub_keys)
     result["total"] = total
     result["score"] = round(total / 100, 4)
     result["model"] = completion.model
@@ -222,15 +226,16 @@ def score_reasoning(
         logger.warning("LLM judge returned non-JSON: %s", raw[:200])
         raise ValueError(f"LLM judge returned non-JSON output: {raw[:200]}")
 
-    total = result.get("total") or sum(
-        result.get(k, 0)
-        for k in (
-            "logical_coherence",
-            "evidence_grounding",
-            "specificity",
-            "consistency",
-        )
+    sub_keys = (
+        "logical_coherence",
+        "evidence_grounding",
+        "specificity",
+        "consistency",
     )
+    for k in sub_keys:
+        result[k] = int(result.get(k, 0))
+    total = result.get("total")
+    total = int(total) if total else sum(result[k] for k in sub_keys)
     result["total"] = total
     result["score"] = round(total / 100, 4)
     result["model"] = completion.model

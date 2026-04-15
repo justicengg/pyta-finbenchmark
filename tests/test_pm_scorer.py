@@ -35,27 +35,31 @@ def _seed_case(db_session, sandbox_id="sb-001", status="detected"):
         decision="invest",
         confidence=0.85,
         report_snapshot={
+            "event": "primary_run_completed",
             "decision": "invest",
             "confidence": 0.85,
-            "key_assumptions": [
-                {
-                    "description": "毛利率维持50%以上",
-                    "type": "hard",
-                    "falsifiable": True,
+            "key_assumptions": {
+                "hard": [{"description": "毛利率维持50%以上", "falsifiable": True}],
+                "soft": [],
+            },
+            "uncertainty_map": {
+                "assessments": {
+                    "market_validity": {"score": 0.8, "uncertainty": 0.2},
+                    "team_execution": {"score": 0.7, "uncertainty": 0.3},
                 }
-            ],
-            "dimension_scores": {
-                "market_validity": {"score": 0.8, "uncertainty": 0.2},
-                "team_execution": {"score": 0.7, "uncertainty": 0.3},
             },
             "path_forks": [
                 {"scenario": "bull", "probability": 0.6, "outcome": "Series D"},
                 {"scenario": "bear", "probability": 0.4, "outcome": "down round"},
             ],
-            "financial_analysis": {
+            "financial_lens": {
                 "arr": 200_000_000,
                 "burn_rate": 5_000_000,
                 "runway_months": 18,
+            },
+            "valuation_analysis": {
+                "method": "revenue_multiple",
+                "implied_valuation": 2_000_000_000,
             },
             "monitoring_triggers": [{"metric": "arr_growth", "threshold": "< 50% YoY"}],
         },
