@@ -178,6 +178,22 @@ def check_re_004(snapshot: dict) -> dict | None:
 # ---------------------------------------------------------------------------
 
 
+def _extract_dimensions(round_trace: dict) -> dict[str, dict]:
+    """Convert round trace to {dim_name: {"score": ...}} dict.
+
+    Supports both formats:
+    - Engine format: {"dimension_signals": [{"dimension": "x", "score": "high"}, ...]}
+    - Legacy/test format: {"dimensions": {"x": {"score": "high"}, ...}}
+    """
+    # Legacy format (dict keyed by dimension name)
+    dims = round_trace.get("dimensions")
+    if isinstance(dims, dict):
+        return dims
+    # Engine format (list of signal objects)
+    signals = round_trace.get("dimension_signals", [])
+    return {s["dimension"]: s for s in signals if "dimension" in s}
+
+
 def check_re_005(snapshot: dict) -> dict | None:
     trace = snapshot.get("reasoning_trace")
     if not trace:
@@ -189,8 +205,8 @@ def check_re_005(snapshot: dict) -> dict | None:
 
     oscillations = []
     for i in range(len(round_traces) - 1):
-        dims_a = round_traces[i].get("dimensions", {})
-        dims_b = round_traces[i + 1].get("dimensions", {})
+        dims_a = _extract_dimensions(round_traces[i])
+        dims_b = _extract_dimensions(round_traces[i + 1])
         all_dims = set(dims_a.keys()) & set(dims_b.keys())
         for dim in all_dims:
             score_a = dims_a[dim].get("score", "")
@@ -281,7 +297,9 @@ def check_re_007(snapshot: dict) -> dict | None:
         return None
 
     forks = snapshot.get("path_forks", [])
-    unverified = [f for f in forks if f.get("trigger") == "hard_assumption_unverified"]
+    # Accept both engine enum value and legacy test value
+    _hard_triggers = {"hard_assumption_violated", "hard_assumption_unverified"}
+    unverified = [f for f in forks if f.get("trigger") in _hard_triggers]
 
     if len(unverified) < 3:
         return None
