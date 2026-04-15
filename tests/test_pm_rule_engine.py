@@ -160,6 +160,17 @@ def test_re_004_no_trigger_non_invest():
     assert check_re_004(snapshot) is None
 
 
+def test_re_004_null_monitoring_triggers():
+    """monitoring_triggers: null should not raise TypeError."""
+    snapshot = {
+        "decision": "invest",
+        "monitoring_triggers": None,
+    }
+    result = check_re_004(snapshot)
+    assert result is not None
+    assert result["evidence"]["trigger_count"] == 0
+
+
 # ── RE-005: 跨轮信号震荡 ────────────────────────────────────────────────
 
 
@@ -322,11 +333,12 @@ def test_detect_multiple_issues():
 
 
 def test_rule_failure_does_not_block_others():
-    """A null field that crashes one rule should not suppress other rules."""
+    """Dispatcher try/except ensures one failing rule does not suppress others."""
     snapshot = {
         "decision": "invest",
         "confidence": 0.95,
-        # null monitoring_triggers would crash RE-004's len() call
+        # null monitoring_triggers is now handled by RE-004, but the
+        # try/except in detect_reasoning_errors still guards against future crashes
         "monitoring_triggers": None,
         "uncertainty_map": {
             "assessments": {

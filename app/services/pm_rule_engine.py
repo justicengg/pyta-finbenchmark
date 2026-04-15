@@ -149,7 +149,7 @@ def check_re_004(snapshot: dict) -> dict | None:
     if decision not in ("invest", "priority_diligence"):
         return None
 
-    triggers = snapshot.get("monitoring_triggers", [])
+    triggers = snapshot.get("monitoring_triggers") or []
     if len(triggers) >= 2:
         return None
 
