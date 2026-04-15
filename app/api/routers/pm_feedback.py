@@ -3,6 +3,7 @@ PmFeedback endpoints — query and manage feedback generated from PM issues.
 """
 
 from datetime import datetime, timezone
+from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -15,9 +16,11 @@ from app.models.pm_issue import PmIssue
 
 router = APIRouter(prefix="/feedback", tags=["pm-feedback"])
 
+VALID_STATUSES = {"open", "acknowledged", "resolved", "wont_fix"}
+
 
 class PatchFeedbackRequest(BaseModel):
-    status: str | None = None
+    status: Literal["open", "acknowledged", "resolved", "wont_fix"] | None = None
 
 
 # ── List ─────────────────────────────────────────────────────────
@@ -111,6 +114,8 @@ def patch_feedback(
         fb.status = body.status
         if body.status == "resolved":
             fb.resolved_at = datetime.now(timezone.utc)
+        else:
+            fb.resolved_at = None
     db.commit()
     db.refresh(fb)
     return _serialize(fb)

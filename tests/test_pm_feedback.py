@@ -418,6 +418,37 @@ def test_api_patch_resolved_sets_timestamp():
     assert resp.json()["resolved_at"] is not None
 
 
+def test_api_patch_reopen_clears_resolved_at():
+    client, Session = build_test_app()
+    with Session() as db:
+        case = _seed_case(db)
+        issue = _seed_issue(db, case.id, rule_id="RE-006")
+        feedbacks = generate_feedback_for_issues(case.id, [issue], db)
+        db.commit()
+        fb_id = str(feedbacks[0].id)
+
+    # Resolve first
+    client.patch(f"/api/pm/feedback/{fb_id}", json={"status": "resolved"})
+    # Reopen — resolved_at should be cleared
+    resp = client.patch(f"/api/pm/feedback/{fb_id}", json={"status": "open"})
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "open"
+    assert resp.json()["resolved_at"] is None
+
+
+def test_api_patch_invalid_status_returns_422():
+    client, Session = build_test_app()
+    with Session() as db:
+        case = _seed_case(db)
+        issue = _seed_issue(db, case.id, rule_id="RE-006")
+        feedbacks = generate_feedback_for_issues(case.id, [issue], db)
+        db.commit()
+        fb_id = str(feedbacks[0].id)
+
+    resp = client.patch(f"/api/pm/feedback/{fb_id}", json={"status": "resovled"})
+    assert resp.status_code == 422
+
+
 def test_api_patch_not_found():
     client, _ = build_test_app()
     resp = client.patch("/api/pm/feedback/nonexistent", json={"status": "resolved"})
