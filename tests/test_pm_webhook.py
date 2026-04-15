@@ -112,3 +112,13 @@ def test_report_snapshot_contains_full_payload():
     )
     assert resp.json()["status"] == "created"
     assert resp.json()["case_id"] is not None
+
+
+def test_malformed_generated_at_returns_422():
+    client = build_test_client()
+    payload = {**SAMPLE_PAYLOAD, "generated_at": "not-a-date"}
+    resp = client.post(
+        "/api/webhook/primary-run-completed",
+        json=payload,
+    )
+    assert resp.status_code == 422

@@ -2,7 +2,8 @@
 Webhook endpoint: receives primary-market run completion events from the main backend.
 """
 
-from dateutil.parser import parse as parse_datetime
+from datetime import datetime
+
 from fastapi import APIRouter, Depends, HTTPException, Header
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -19,7 +20,7 @@ class PrimaryRunCompletedPayload(BaseModel):
     sandbox_id: str
     company_name: str
     sector: str | None = None
-    generated_at: str
+    generated_at: datetime
     decision: str
     confidence: float
     decision_rationale: str = ""
@@ -71,10 +72,10 @@ def receive_primary_run(
         sandbox_id=payload.sandbox_id,
         company_name=payload.company_name,
         sector=payload.sector,
-        run_timestamp=parse_datetime(payload.generated_at),
+        run_timestamp=payload.generated_at,
         decision=payload.decision,
         confidence=payload.confidence,
-        report_snapshot=payload.model_dump(),
+        report_snapshot=payload.model_dump(mode="json"),
         status="pending",
         source="online",
     )
