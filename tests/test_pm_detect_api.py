@@ -328,5 +328,7 @@ def test_detect_job_empty_snapshot_not_stuck():
 
     db2 = TestSession()
     updated = db2.query(PmEvalCase).filter(PmEvalCase.id == case_id).first()
-    assert updated.status == "detected", "Empty snapshot case should be finalized, not stuck pending"
+    assert updated.status == "detected", (
+        "Empty snapshot case should be finalized, not stuck pending"
+    )
     db2.close()
