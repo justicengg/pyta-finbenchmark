@@ -121,6 +121,15 @@ def test_re_003_no_trigger_pass_decision():
     assert check_re_003(snapshot) is None
 
 
+def test_re_003_no_trigger_priority_diligence():
+    """priority_diligence is already a downgraded decision — not a false positive."""
+    snapshot = {
+        "benchmark_comparison": {"confidence_delta": -0.12},
+        "decision": "priority_diligence",
+    }
+    assert check_re_003(snapshot) is None
+
+
 # ── RE-004: Monitoring trigger 缺失 ─────────────────────────────────────
 
 
@@ -310,3 +319,23 @@ def test_detect_multiple_issues():
     assert "RE-006" in rule_ids
     assert "RE-007" in rule_ids
     assert len(issues) >= 3
+
+
+def test_rule_failure_does_not_block_others():
+    """A null field that crashes one rule should not suppress other rules."""
+    snapshot = {
+        "decision": "invest",
+        "confidence": 0.95,
+        # null monitoring_triggers would crash RE-004's len() call
+        "monitoring_triggers": None,
+        "uncertainty_map": {
+            "assessments": {
+                "market_validity": {"score": "high"},
+                "tech_barrier": {"score": "high"},
+            }
+        },
+    }
+    issues = detect_reasoning_errors(snapshot)
+    # RE-006 should still fire even though RE-004 crashes
+    rule_ids = {i["evidence"]["rule_id"] for i in issues}
+    assert "RE-006" in rule_ids

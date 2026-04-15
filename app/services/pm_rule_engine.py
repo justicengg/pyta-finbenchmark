@@ -7,6 +7,10 @@ No I/O, ms-level execution.
 
 from __future__ import annotations
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 SCORE_MAP = {"high": 2, "medium": 1, "low": 0}
 
 
@@ -14,7 +18,11 @@ def detect_reasoning_errors(report_snapshot: dict) -> list[dict]:
     """Run all rules against a report_snapshot, return detected issues."""
     issues: list[dict] = []
     for rule_fn in ALL_RULES:
-        result = rule_fn(report_snapshot)
+        try:
+            result = rule_fn(report_snapshot)
+        except Exception:
+            logger.exception("Rule %s failed, skipping", rule_fn.__name__)
+            continue
         if result is not None:
             issues.append(result)
     return issues
@@ -108,7 +116,7 @@ def check_re_003(snapshot: dict) -> dict | None:
         return None
 
     decision = snapshot.get("decision", "")
-    if decision not in ("invest", "priority_diligence"):
+    if decision != "invest":
         return None
 
     return {
@@ -117,7 +125,7 @@ def check_re_003(snapshot: dict) -> dict | None:
         "stage": "lens",
         "dimension": None,
         "expected": "当 benchmark 比较拉低置信度 (delta < -0.05) 时，不应直接推荐 invest",
-        "actual": f"benchmark confidence_delta={delta}, 但 decision={decision}",
+        "actual": f"benchmark confidence_delta={delta}, 但 decision=invest",
         "evidence": {
             "rule_id": "RE-003",
             "benchmark_confidence_delta": delta,
