@@ -10,6 +10,7 @@ from fastapi.staticfiles import StaticFiles
 from app.api.routers import (
     cases,
     pm_cases,
+    pm_ground_truths,
     pm_issues,
     pm_webhook,
     scores,
@@ -62,6 +63,7 @@ app.include_router(cases.router, prefix="/api")
 app.include_router(scores.router, prefix="/api")
 app.include_router(settings.router, prefix="/api")
 app.include_router(pm_cases.router, prefix="/api/pm")
+app.include_router(pm_ground_truths.router, prefix="/api/pm")
 app.include_router(pm_issues.router, prefix="/api/pm")
 
 
