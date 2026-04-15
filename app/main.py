@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from app.api.routers import cases, pm_cases, pm_issues, scores, settings, webhook
+from app.api.routers import cases, pm_cases, pm_issues, pm_webhook, scores, settings, webhook
 from app.db import Base, engine
 from app.jobs import collect_gt, pm_detect, run_scoring
 
@@ -49,6 +49,7 @@ app.add_middleware(
 )
 
 app.include_router(webhook.router, prefix="/api")
+app.include_router(pm_webhook.router, prefix="/api")
 app.include_router(cases.router, prefix="/api")
 app.include_router(scores.router, prefix="/api")
 app.include_router(settings.router, prefix="/api")

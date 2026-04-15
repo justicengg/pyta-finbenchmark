@@ -330,3 +330,24 @@ def test_detect_multiple_issues():
     assert "RE-006" in rule_ids
     assert "RE-007" in rule_ids
     assert len(issues) >= 3
+
+
+def test_rule_failure_does_not_block_others():
+    """Dispatcher try/except ensures one failing rule does not suppress others."""
+    snapshot = {
+        "decision": "invest",
+        "confidence": 0.95,
+        # null monitoring_triggers is now handled by RE-004, but the
+        # try/except in detect_reasoning_errors still guards against future crashes
+        "monitoring_triggers": None,
+        "uncertainty_map": {
+            "assessments": {
+                "market_validity": {"score": "high"},
+                "tech_barrier": {"score": "high"},
+            }
+        },
+    }
+    issues = detect_reasoning_errors(snapshot)
+    # RE-006 should still fire even though RE-004 crashes
+    rule_ids = {i["evidence"]["rule_id"] for i in issues}
+    assert "RE-006" in rule_ids

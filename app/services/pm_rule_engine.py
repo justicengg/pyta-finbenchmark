@@ -7,6 +7,10 @@ No I/O, ms-level execution.
 
 from __future__ import annotations
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 SCORE_MAP = {"high": 2, "medium": 1, "low": 0}
 
 
@@ -14,7 +18,11 @@ def detect_reasoning_errors(report_snapshot: dict) -> list[dict]:
     """Run all rules against a report_snapshot, return detected issues."""
     issues: list[dict] = []
     for rule_fn in ALL_RULES:
-        result = rule_fn(report_snapshot)
+        try:
+            result = rule_fn(report_snapshot)
+        except Exception:
+            logger.exception("Rule %s failed, skipping", rule_fn.__name__)
+            continue
         if result is not None:
             issues.append(result)
     return issues
