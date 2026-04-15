@@ -121,6 +121,15 @@ def test_re_003_no_trigger_pass_decision():
     assert check_re_003(snapshot) is None
 
 
+def test_re_003_no_trigger_priority_diligence():
+    """priority_diligence is already a downgraded decision — not a false positive."""
+    snapshot = {
+        "benchmark_comparison": {"confidence_delta": -0.12},
+        "decision": "priority_diligence",
+    }
+    assert check_re_003(snapshot) is None
+
+
 # ── RE-004: Monitoring trigger 缺失 ─────────────────────────────────────
 
 
@@ -149,6 +158,17 @@ def test_re_004_no_trigger_non_invest():
         "monitoring_triggers": [],
     }
     assert check_re_004(snapshot) is None
+
+
+def test_re_004_null_monitoring_triggers():
+    """monitoring_triggers: null should not raise TypeError."""
+    snapshot = {
+        "decision": "invest",
+        "monitoring_triggers": None,
+    }
+    result = check_re_004(snapshot)
+    assert result is not None
+    assert result["evidence"]["trigger_count"] == 0
 
 
 # ── RE-005: 跨轮信号震荡 ────────────────────────────────────────────────

@@ -141,6 +141,23 @@ def test_cases_bootstrap():
     assert "case_id" in resp.json()
 
 
+def test_cases_bootstrap_invalid_datetime():
+    """Invalid generated_at should return 422, not 500."""
+    client, _ = build_test_app()
+    resp = client.post(
+        "/api/pm/cases/bootstrap",
+        json={
+            "sandbox_id": "bad-ts-001",
+            "company_name": "BadTsCo",
+            "generated_at": "not-a-date",
+            "decision": "monitor",
+            "confidence": 0.5,
+            "report_snapshot": {"test": True},
+        },
+    )
+    assert resp.status_code == 422
+
+
 def test_cases_bootstrap_duplicate():
     client, _ = build_test_app()
     payload = {
@@ -271,4 +288,45 @@ def test_detect_job_processes_pending_cases():
     rule_ids = {i.evidence.get("rule_id") for i in issues}
     assert "RE-004" in rule_ids
     assert "RE-006" in rule_ids
+    db2.close()
+
+
+def test_detect_job_empty_snapshot_not_stuck():
+    """Empty dict snapshot should be finalized, not stuck pending forever."""
+    from sqlalchemy import create_engine as ce
+    from sqlalchemy.orm import sessionmaker as sm
+    from sqlalchemy.pool import StaticPool as sp
+
+    engine = ce("sqlite://", connect_args={"check_same_thread": False}, poolclass=sp)
+    TestSession = sm(bind=engine, autocommit=False, autoflush=False)
+    Base.metadata.create_all(bind=engine)
+
+    db = TestSession()
+    case = PmEvalCase(
+        id=str(uuid.uuid4()),
+        sandbox_id="empty-snap-001",
+        company_name="EmptyCo",
+        run_timestamp=datetime.now(timezone.utc),
+        decision="invest",
+        confidence=0.5,
+        report_snapshot={},
+        status="pending",
+        source="bootstrap",
+    )
+    db.add(case)
+    db.commit()
+    case_id = case.id
+
+    import app.jobs.pm_detect as pm_detect_mod
+
+    original_session_local = pm_detect_mod.SessionLocal
+    pm_detect_mod.SessionLocal = TestSession
+    try:
+        pm_detect_mod.run()
+    finally:
+        pm_detect_mod.SessionLocal = original_session_local
+
+    db2 = TestSession()
+    updated = db2.query(PmEvalCase).filter(PmEvalCase.id == case_id).first()
+    assert updated.status == "detected", "Empty snapshot case should be finalized, not stuck pending"
     db2.close()

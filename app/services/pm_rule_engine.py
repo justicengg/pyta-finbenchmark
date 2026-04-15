@@ -108,7 +108,7 @@ def check_re_003(snapshot: dict) -> dict | None:
         return None
 
     decision = snapshot.get("decision", "")
-    if decision not in ("invest", "priority_diligence"):
+    if decision != "invest":
         return None
 
     return {
@@ -117,7 +117,7 @@ def check_re_003(snapshot: dict) -> dict | None:
         "stage": "lens",
         "dimension": None,
         "expected": "当 benchmark 比较拉低置信度 (delta < -0.05) 时，不应直接推荐 invest",
-        "actual": f"benchmark confidence_delta={delta}, 但 decision={decision}",
+        "actual": f"benchmark confidence_delta={delta}, 但 decision=invest",
         "evidence": {
             "rule_id": "RE-003",
             "benchmark_confidence_delta": delta,
@@ -141,7 +141,7 @@ def check_re_004(snapshot: dict) -> dict | None:
     if decision not in ("invest", "priority_diligence"):
         return None
 
-    triggers = snapshot.get("monitoring_triggers", [])
+    triggers = snapshot.get("monitoring_triggers") or []
     if len(triggers) >= 2:
         return None
 

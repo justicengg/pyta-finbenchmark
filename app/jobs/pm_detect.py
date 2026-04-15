@@ -40,7 +40,7 @@ def run() -> None:
 
 def _detect_case(case: PmEvalCase, db) -> None:
     snapshot = case.report_snapshot
-    if not snapshot:
+    if snapshot is None:
         logger.warning("case %s has no report_snapshot, skipping", case.id)
         return
 

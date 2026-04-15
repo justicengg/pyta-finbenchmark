@@ -2,7 +2,8 @@
 PmEvalCase CRUD + bootstrap case creation — primary-market version.
 """
 
-from dateutil.parser import parse as parse_datetime
+from datetime import datetime
+
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -17,7 +18,7 @@ class PmBootstrapRequest(BaseModel):
     sandbox_id: str
     company_name: str
     sector: str | None = None
-    generated_at: str
+    generated_at: datetime
     decision: str
     confidence: float
     report_snapshot: dict
@@ -69,7 +70,7 @@ def create_bootstrap_case(body: PmBootstrapRequest, db: Session = Depends(get_db
         sandbox_id=body.sandbox_id,
         company_name=body.company_name,
         sector=body.sector,
-        run_timestamp=parse_datetime(body.generated_at),
+        run_timestamp=body.generated_at,
         decision=body.decision,
         confidence=body.confidence,
         report_snapshot=body.report_snapshot,
