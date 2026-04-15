@@ -7,9 +7,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from app.api.routers import cases, scores, settings, webhook
+from app.api.routers import cases, pm_cases, pm_issues, scores, settings, webhook
 from app.db import Base, engine
-from app.jobs import collect_gt, run_scoring
+from app.jobs import collect_gt, pm_detect, run_scoring
 
 DASHBOARD_DIR = Path(__file__).parent.parent / "dashboard"
 
@@ -25,6 +25,8 @@ async def lifespan(app: FastAPI):
     scheduler.add_job(collect_gt.run, "cron", hour=9, minute=0, id="collect_gt")
     # Run scoring daily at 09:30 (after GT collection)
     scheduler.add_job(run_scoring.run, "cron", hour=9, minute=30, id="run_scoring")
+    # PM catch-up detection daily at 10:00
+    scheduler.add_job(pm_detect.run, "cron", hour=10, minute=0, id="pm_detect")
     scheduler.start()
 
     yield
@@ -50,6 +52,8 @@ app.include_router(webhook.router, prefix="/api")
 app.include_router(cases.router, prefix="/api")
 app.include_router(scores.router, prefix="/api")
 app.include_router(settings.router, prefix="/api")
+app.include_router(pm_cases.router, prefix="/api/pm")
+app.include_router(pm_issues.router, prefix="/api/pm")
 
 
 @app.get("/health")
