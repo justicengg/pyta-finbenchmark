@@ -5,6 +5,7 @@ Revises: 20260401_0001
 Create Date: 2026-04-15
 
 """
+
 from typing import Sequence, Union
 
 import sqlalchemy as sa
@@ -31,7 +32,9 @@ def upgrade() -> None:
         sa.Column("source", sa.String(32), nullable=False, server_default="online"),
         sa.Column("created_at", sa.DateTime, server_default=sa.func.now()),
     )
-    op.create_index("ix_pm_eval_cases_sandbox_id", "pm_eval_cases", ["sandbox_id"], unique=True)
+    op.create_index(
+        "ix_pm_eval_cases_sandbox_id", "pm_eval_cases", ["sandbox_id"], unique=True
+    )
     op.create_index("ix_pm_eval_cases_company_name", "pm_eval_cases", ["company_name"])
     op.create_index("ix_pm_eval_cases_decision", "pm_eval_cases", ["decision"])
     op.create_index("ix_pm_eval_cases_status", "pm_eval_cases", ["status"])

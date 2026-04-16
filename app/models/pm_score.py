@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import DateTime, Float, JSON, String
 from sqlalchemy.orm import Mapped, mapped_column
@@ -21,4 +21,6 @@ class PmEvalScore(Base):
     scorer_type: Mapped[str] = mapped_column(String(16), nullable=False)
     scorer_model: Mapped[str | None] = mapped_column(String(64), nullable=True)
     score_details: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
-    scored_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    scored_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(timezone.utc)
+    )
