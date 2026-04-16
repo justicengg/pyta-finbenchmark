@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, Integer, String, Text
+from sqlalchemy import DateTime, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db import Base
@@ -9,6 +9,9 @@ from app.db import Base
 
 class PmFeedback(Base):
     __tablename__ = "pm_feedback"
+    __table_args__ = (
+        UniqueConstraint("case_id", "issue_id", name="uq_pm_feedback_case_issue"),
+    )
 
     id: Mapped[str] = mapped_column(
         String(36), primary_key=True, default=lambda: str(uuid.uuid4())
