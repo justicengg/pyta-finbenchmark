@@ -12,7 +12,9 @@ from sqlalchemy import exists
 
 from app.db import SessionLocal
 from app.models import PmEvalCase, PmIssue
+from app.services.pm_feedback_generator import generate_feedback_for_issues
 from app.services.pm_rule_engine import detect_reasoning_errors
+from app.services.pm_scorer import score_case
 
 logger = logging.getLogger(__name__)
 
@@ -54,6 +56,13 @@ def _detect_case(case: PmEvalCase, db) -> None:
             **issue_dict,
         )
         db.add(issue)
+
+    db.flush()  # populate issue.id before feedback generation
+
+    pm_issues = db.query(PmIssue).filter(PmIssue.case_id == case.id).all()
+    generate_feedback_for_issues(case.id, pm_issues, db)
+
+    score_case(case, db)
 
     case.status = "detected"
     db.commit()

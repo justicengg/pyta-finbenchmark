@@ -303,6 +303,62 @@ def test_re_007_no_trigger_low_confidence():
     assert check_re_007(snapshot) is None
 
 
+# ── Engine-format compatibility ──────────────────────────────────────────
+
+
+def test_re_005_engine_format_dimension_signals():
+    """Engine produces dimension_signals (list), not dimensions (dict)."""
+    snapshot = {
+        "reasoning_trace": {
+            "round_traces": [
+                {
+                    "round_number": 1,
+                    "avg_confidence": 0.7,
+                    "dimension_signals": [
+                        {
+                            "dimension": "tech_barrier",
+                            "score": "high",
+                            "confidence": 0.8,
+                        },
+                    ],
+                },
+                {
+                    "round_number": 2,
+                    "avg_confidence": 0.6,
+                    "dimension_signals": [
+                        {
+                            "dimension": "tech_barrier",
+                            "score": "low",
+                            "confidence": 0.5,
+                        },
+                    ],
+                },
+            ]
+        }
+    }
+    result = check_re_005(snapshot)
+    assert result is not None
+    assert result["evidence"]["rule_id"] == "RE-005"
+    assert result["evidence"]["oscillations"][0]["dimension"] == "tech_barrier"
+
+
+def test_re_007_engine_format_hard_assumption_violated():
+    """Engine uses 'hard_assumption_violated', not 'hard_assumption_unverified'."""
+    snapshot = {
+        "decision": "invest",
+        "confidence": 1.0,
+        "path_forks": [
+            {"trigger": "hard_assumption_violated", "trigger_assumption": "a1"},
+            {"trigger": "hard_assumption_violated", "trigger_assumption": "a2"},
+            {"trigger": "hard_assumption_violated", "trigger_assumption": "a3"},
+        ],
+    }
+    result = check_re_007(snapshot)
+    assert result is not None
+    assert result["evidence"]["rule_id"] == "RE-007"
+    assert result["evidence"]["unverified_fork_count"] == 3
+
+
 # ── Integration: detect_reasoning_errors ─────────────────────────────────
 
 
